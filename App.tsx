@@ -8,6 +8,8 @@ import { OnboardingLayout } from './components/OnboardingLayout';
 import { StarParticles } from './components/StarParticles';
 import { GeminiSVG } from './components/GeminiSVG';
 import { CinematicBackground } from './components/CinematicBackground';
+import { generateAffirmationsBatch, Affirmation } from './services/gemini';
+import { FlatList, ActivityIndicator } from 'react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -38,25 +40,25 @@ const WelcomeScreen: React.FC<{ onNext: () => void }> = ({ onNext }) => {
   return (
     <View style={styles.welcomeContainer}>
       <CinematicBackground />
-      
+
       <SafeAreaView style={styles.welcomeSafeArea}>
         {/* Logo/Video at the top */}
         <View style={styles.logoContainer}>
           <GeminiSVG width={260} height={260} />
-      </View>
+        </View>
 
-      {/* Main Content */}
-      <View style={styles.welcomeContent}>
-        <Text style={styles.welcomeTitle}>Hola, soy Lio</Text>
-        <Text style={styles.welcomeSubtitle}>Estoy aquí para iluminar tu día</Text>
-          
-        <Text style={styles.welcomeDescription}>
+        {/* Main Content */}
+        <View style={styles.welcomeContent}>
+          <Text style={styles.welcomeTitle}>Hola, soy Lio</Text>
+          <Text style={styles.welcomeSubtitle}>Estoy aquí para iluminar tu día</Text>
+
+          <Text style={styles.welcomeDescription}>
             Descubre el poder de las afirmaciones diarias para cultivar una mente positiva y conectar con tu mejor versión.
-        </Text>
-      </View>
+          </Text>
+        </View>
 
-      {/* Button */}
-      <View style={styles.welcomeButtonContainer}>
+        {/* Button */}
+        <View style={styles.welcomeButtonContainer}>
           <TouchableOpacity style={styles.gradientButton} onPress={onNext} activeOpacity={0.9}>
             <LinearGradient
               colors={['#4C1D95', '#6D28D9', '#7C3AED']}
@@ -66,25 +68,25 @@ const WelcomeScreen: React.FC<{ onNext: () => void }> = ({ onNext }) => {
             >
               <Text style={styles.gradientButtonText}>Encender mi luz</Text>
             </LinearGradient>
-        </TouchableOpacity>
-      </View>
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     </View>
   );
 };
 
 // Name Screen
-const NameScreen: React.FC<{ 
-  name: string; 
-  setName: (n: string) => void; 
-  onNext: () => void 
+const NameScreen: React.FC<{
+  name: string;
+  setName: (n: string) => void;
+  onNext: () => void
 }> = ({ name, setName, onNext }) => {
   return (
     <OnboardingLayout onContinue={onNext} isValid={name.length > 0}>
       <View style={styles.screenContent}>
         <Text style={styles.screenTitle}>¿Cómo quieres que te llamemos?</Text>
         <Text style={styles.screenSubtitle}>Tu nombre aparecerá en tus afirmaciones</Text>
-        
+
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
@@ -92,7 +94,6 @@ const NameScreen: React.FC<{
             placeholderTextColor="rgba(255, 255, 255, 0.5)"
             value={name}
             onChangeText={setName}
-            autoFocus
           />
         </View>
       </View>
@@ -101,10 +102,10 @@ const NameScreen: React.FC<{
 };
 
 // Age Screen
-const AgeScreen: React.FC<{ 
-  selected: string; 
-  onSelect: (v: string) => void; 
-  onNext: () => void 
+const AgeScreen: React.FC<{
+  selected: string;
+  onSelect: (v: string) => void;
+  onNext: () => void
 }> = ({ selected, onSelect, onNext }) => {
   const ranges = ["13 a 17", "18 a 24", "25 a 34", "35 a 44", "45 a 54", "+55"];
 
@@ -113,7 +114,7 @@ const AgeScreen: React.FC<{
       <View style={styles.screenContent}>
         <Text style={styles.screenTitle}>¿Cuántos años tienes?</Text>
         <Text style={styles.screenSubtitle}>Tu edad se usa para personalizar el contenido</Text>
-        
+
         <View style={styles.optionsContainer}>
           {ranges.map((range) => (
             <TouchableOpacity
@@ -137,10 +138,10 @@ const AgeScreen: React.FC<{
 };
 
 // Interests Screen
-const InterestsScreen: React.FC<{ 
-  selected: string[]; 
-  toggle: (id: string) => void; 
-  onNext: () => void 
+const InterestsScreen: React.FC<{
+  selected: string[];
+  toggle: (id: string) => void;
+  onNext: () => void
 }> = ({ selected, toggle, onNext }) => {
   const interests = [
     "Sueña a lo grande", "Sentirse atrevido", "Amor propio", "Niño interior",
@@ -153,7 +154,7 @@ const InterestsScreen: React.FC<{
       <View style={styles.screenContent}>
         <Text style={styles.screenTitle}>¿Qué categorías te interesan?</Text>
         <Text style={styles.screenSubtitle}>Esto se usará para personalizar tu feed</Text>
-        
+
         <View style={styles.interestsGrid}>
           {interests.map((interest) => {
             const isSelected = selected.includes(interest);
@@ -166,8 +167,14 @@ const InterestsScreen: React.FC<{
                   isSelected && styles.interestCardSelected
                 ]}
               >
-                <Text style={styles.interestPlus}>+</Text>
-                <Text style={styles.interestText}>{interest}</Text>
+                <MaterialIcons
+                  name={isSelected ? "check" : "add"}
+                  size={18}
+                  color={isSelected ? "#FFFFFF" : "rgba(255, 255, 255, 0.6)"}
+                />
+                <Text style={[styles.interestText, isSelected && styles.interestTextSelected]}>
+                  {interest}
+                </Text>
               </TouchableOpacity>
             );
           })}
@@ -180,12 +187,12 @@ const InterestsScreen: React.FC<{
 // Streak Screen
 const StreakScreen: React.FC<{ onNext: () => void }> = ({ onNext }) => {
   const days = ['Ma', 'Mi', 'Ju', 'Vi', 'Sa', 'Do', 'Lu'];
-  
+
   return (
     <OnboardingLayout onContinue={onNext} showSkip={false}>
       <View style={styles.screenContent}>
         <Text style={styles.screenTitle}>Construye un hábito diario de práctica de afirmaciones</Text>
-        
+
         <GlassCard style={styles.streakCard}>
           <View style={styles.streakDays}>
             {days.map((day, idx) => (
@@ -207,10 +214,10 @@ const StreakScreen: React.FC<{ onNext: () => void }> = ({ onNext }) => {
 };
 
 // Mental Health Screen
-const MentalHealthScreen: React.FC<{ 
-  selected: string[]; 
-  toggle: (v: string) => void; 
-  onNext: () => void 
+const MentalHealthScreen: React.FC<{
+  selected: string[];
+  toggle: (v: string) => void;
+  onNext: () => void
 }> = ({ selected, toggle, onNext }) => {
   const options = [
     { text: "Gratitud", icon: "favorite" },
@@ -227,7 +234,7 @@ const MentalHealthScreen: React.FC<{
       <View style={styles.screenContent}>
         <Text style={styles.screenTitle}>¿Qué quieres mejorar?</Text>
         <Text style={styles.screenSubtitle}>Elige al menos una para adaptar el contenido a tus necesidades</Text>
-        
+
         <View style={styles.optionsContainer}>
           {options.map((opt) => {
             const isSelected = selected.includes(opt.text);
@@ -257,8 +264,8 @@ const MentalHealthScreen: React.FC<{
 };
 
 // Notifications Screen
-const NotificationScreen: React.FC<{ 
-  data: OnboardingData; 
+const NotificationScreen: React.FC<{
+  data: OnboardingData;
   update: (d: Partial<OnboardingData>) => void;
   onNext: () => void;
 }> = ({ data, update, onNext }) => {
@@ -303,7 +310,7 @@ const NotificationScreen: React.FC<{
               </TouchableOpacity>
             </View>
           </GlassCard>
-          
+
           <GlassCard style={styles.settingCard}>
             <Text style={styles.settingLabel}>Desde las</Text>
             <View style={styles.settingTime}>
@@ -326,10 +333,10 @@ const NotificationScreen: React.FC<{
 };
 
 // Gender Screen
-const GenderScreen: React.FC<{ 
-  selected: string; 
-  onSelect: (v: string) => void; 
-  onNext: () => void 
+const GenderScreen: React.FC<{
+  selected: string;
+  onSelect: (v: string) => void;
+  onNext: () => void
 }> = ({ selected, onSelect, onNext }) => {
   const options = ["Femenino", "Masculino", "Otros", "Prefiero no decirlo"];
 
@@ -362,80 +369,131 @@ const GenderScreen: React.FC<{
 };
 
 // Home Screen
-const HomeScreen: React.FC<{ onReset: () => void }> = ({ onReset }) => {
-  return (
-    <View style={styles.homeContainer}>
-      <LinearGradient
-        colors={['transparent', 'rgba(212, 175, 55, 0.08)']}
-        style={styles.homeGradient}
-      />
-      
-      <SafeAreaView style={styles.homeTopBar}>
-        <Text style={styles.homeTime}>20:57</Text>
-        <View style={styles.homeStatus}>
-          <MaterialIcons name="signal-cellular-alt" size={14} color="#FFFFFF" />
-          <Text style={styles.homeStatusText}>4G</Text>
-          <MaterialIcons name="battery-horiz-050" size={14} color="#FFFFFF" style={{ transform: [{ rotate: '90deg' }] }} />
-        </View>
-      </SafeAreaView>
+const HomeScreen: React.FC<{ onReset: () => void; userData: OnboardingData }> = ({ onReset, userData }) => {
+  const [affirmations, setAffirmations] = useState<Affirmation[]>([]);
+  const [loading, setLoading] = useState(false);
 
-      <View style={styles.homeHeader}>
-        <TouchableOpacity style={styles.homeHeaderButton} onPress={onReset}>
-          <MaterialIcons name="person" size={24} color="#E2E8F0" />
-        </TouchableOpacity>
-        
-        <View style={styles.homeHeaderCenter}>
-          <MaterialIcons name="favorite" size={18} color="#D4AF37" />
-          <Text style={styles.homeHeaderText}>0/5</Text>
-          <View style={styles.homeProgressBar}>
-            <View style={[styles.homeProgressFill, { width: 0 }]} />
-          </View>
-        </View>
+  // Initial load
+  React.useEffect(() => {
+    loadMore();
+  }, []);
 
-        <TouchableOpacity style={styles.homeHeaderButton}>
-          <MaterialIcons name="workspace-premium" size={24} color="#D4AF37" />
-        </TouchableOpacity>
-      </View>
+  const loadMore = async () => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      // Use the batch function to get multiple affirmations at once
+      const newAffirmations = await generateAffirmationsBatch(userData, 3);
 
+      setAffirmations(prev => {
+        // Prevent exact text duplicates
+        const uniqueNew = newAffirmations.filter(n => !prev.some(p => p.text === n.text));
+        return [...prev, ...uniqueNew];
+      });
+    } catch (error) {
+      console.warn("Failed to load affirmations:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderItem = ({ item }: { item: Affirmation }) => (
+    <View style={styles.affirmationPage}>
       <View style={styles.homeMain}>
         <Text style={styles.homeAffirmation}>
-          Soy una persona fuerte, segura de sí misma y atraigo conscientemente la felicidad.
+          {item.text}
         </Text>
       </View>
 
-      <View style={styles.homeActions}>
-        <View style={styles.homeActionButtons}>
-          <TouchableOpacity style={styles.homeActionButton}>
-            <MaterialIcons name="ios-share" size={30} color="#94A3B8" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.homeActionButton}>
-            <MaterialIcons name="favorite" size={36} color="#94A3B8" />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.homeSwipeHint}>
-          <Text style={styles.homeSwipeText}>Desliza hacia arriba</Text>
-          <View style={styles.homeSwipeIndicator} />
-        </View>
-
-        <View style={styles.homeNav}>
-          <TouchableOpacity style={styles.homeNavButton}>
-            <View style={styles.homeNavBadge} />
-            <MaterialIcons name="grid-view" size={24} color="rgba(226, 232, 240, 0.6)" />
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.homeNavCenter}>
-            <MaterialIcons name="self-improvement" size={20} color="#E2E8F0" />
-            <Text style={styles.homeNavText}>Práctica</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.homeNavButton}>
-            <MaterialIcons name="palette" size={24} color="rgba(226, 232, 240, 0.6)" />
-          </TouchableOpacity>
-        </View>
+      {/* Action Buttons INSIDE the scrollable page */}
+      <View style={styles.cardActions}>
+        <TouchableOpacity style={styles.cardActionButton}>
+          <MaterialIcons name="share" size={28} color="rgba(255,255,255,0.8)" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.cardActionButton}>
+          <MaterialIcons name="favorite-border" size={32} color="rgba(255,255,255,0.8)" />
+        </TouchableOpacity>
       </View>
+    </View>
+  );
 
-      <View style={styles.homeIndicator} />
+  return (
+    <View style={styles.homeContainer}>
+      {/* Background Gradient */}
+      <LinearGradient
+        colors={['#000000', '#0a0a0a', '#000000']}
+        style={styles.homeGradient}
+      />
+      <LinearGradient
+        colors={['transparent', 'rgba(212, 175, 55, 0.05)']}
+        style={styles.homeGradient}
+      />
+
+      {/* Main Swipeable Content */}
+      <FlatList
+        data={affirmations}
+        renderItem={renderItem}
+        keyExtractor={item => item.id}
+        pagingEnabled
+        showsVerticalScrollIndicator={false}
+        snapToAlignment="start"
+        decelerationRate="fast"
+        snapToInterval={Dimensions.get('window').height}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.8}
+        contentContainerStyle={{ flexGrow: 1 }}
+        style={styles.homeFlatList}
+        ListEmptyComponent={
+          <View style={[styles.affirmationPage, { justifyContent: 'center', alignItems: 'center' }]}>
+            <ActivityIndicator size="large" color="#D4AF37" />
+            <Text style={{ color: 'rgba(255,255,255,0.5)', marginTop: 20 }}>Conectando con el universo...</Text>
+          </View>
+        }
+      />
+
+      {/* TOP OVERLAY: Header */}
+      <SafeAreaView style={styles.homeTopOverlay} pointerEvents="box-none">
+        <View style={styles.homeHeader}>
+          <TouchableOpacity style={styles.homeHeaderButton} onPress={onReset}>
+            <MaterialIcons name="person-outline" size={24} color="#E2E8F0" />
+          </TouchableOpacity>
+
+          <View style={styles.homeHeaderCenter}>
+            <MaterialIcons name="favorite" size={16} color="#D4AF37" />
+            <Text style={styles.homeHeaderText}>{affirmations.length}</Text>
+          </View>
+
+          <TouchableOpacity style={styles.homeHeaderButton}>
+            <MaterialIcons name="workspace-premium" size={24} color="#D4AF37" />
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+
+      {/* BOTTOM OVERLAY: Navigation Only */}
+      <SafeAreaView style={styles.homeBottomOverlay} pointerEvents="box-none">
+        <View style={styles.homeActionsContainer} pointerEvents="box-none">
+
+          {/* Swipe Hint - Subtle */}
+          <View style={styles.homeSwipeHint}>
+            <MaterialIcons name="keyboard-arrow-up" size={24} color="rgba(255,255,255,0.3)" />
+          </View>
+
+          {/* Bottom Nav Bar - Minimalist */}
+          <View style={styles.homeNav}>
+            <TouchableOpacity style={styles.homeNavButton}>
+              <MaterialIcons name="grid-view" size={28} color="rgba(255, 255, 255, 0.4)" />
+            </TouchableOpacity>
+
+            <View style={styles.homeNavCenter}>
+              {/* Practice button moved or removed for simplicity as requested, keeping center clean */}
+            </View>
+
+            <TouchableOpacity style={styles.homeNavButton}>
+              <MaterialIcons name="person-outline" size={28} color="rgba(255, 255, 255, 0.4)" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeAreaView>
     </View>
   );
 };
@@ -464,45 +522,45 @@ const App: React.FC = () => {
       case ScreenName.WELCOME:
         return <WelcomeScreen onNext={() => setScreen(ScreenName.NAME)} />;
       case ScreenName.NAME:
-        return <NameScreen 
+        return <NameScreen
           name={formData.name}
           setName={(v) => updateData({ name: v })}
           onNext={() => setScreen(ScreenName.AGE)}
         />;
       case ScreenName.AGE:
-        return <AgeScreen 
+        return <AgeScreen
           selected={formData.ageRange}
           onSelect={(v) => updateData({ ageRange: v })}
           onNext={() => setScreen(ScreenName.INTERESTS)}
         />;
       case ScreenName.INTERESTS:
-        return <InterestsScreen 
-          selected={formData.interests} 
-          toggle={(id) => toggleSelection('interests', id)} 
-          onNext={() => setScreen(ScreenName.STREAK)} 
+        return <InterestsScreen
+          selected={formData.interests}
+          toggle={(id) => toggleSelection('interests', id)}
+          onNext={() => setScreen(ScreenName.STREAK)}
         />;
       case ScreenName.STREAK:
         return <StreakScreen onNext={() => setScreen(ScreenName.MENTAL_HEALTH)} />;
       case ScreenName.MENTAL_HEALTH:
-        return <MentalHealthScreen 
+        return <MentalHealthScreen
           selected={formData.mentalHealthHabits}
           toggle={(id) => toggleSelection('mentalHealthHabits', id)}
           onNext={() => setScreen(ScreenName.NOTIFICATIONS)}
         />;
       case ScreenName.NOTIFICATIONS:
-        return <NotificationScreen 
+        return <NotificationScreen
           data={formData}
           update={updateData}
           onNext={() => setScreen(ScreenName.GENDER)}
         />;
       case ScreenName.GENDER:
-        return <GenderScreen 
+        return <GenderScreen
           selected={formData.gender}
           onSelect={(v) => updateData({ gender: v })}
           onNext={() => setScreen(ScreenName.HOME)}
         />;
       case ScreenName.HOME:
-        return <HomeScreen onReset={() => setScreen(ScreenName.WELCOME)} />;
+        return <HomeScreen onReset={() => setScreen(ScreenName.WELCOME)} userData={formData} />;
       default:
         return <View><Text>Unknown Screen</Text></View>;
     }
@@ -511,7 +569,7 @@ const App: React.FC = () => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="light" />
-        {renderScreen()}
+      {renderScreen()}
     </SafeAreaView>
   );
 };
@@ -621,22 +679,24 @@ const styles = StyleSheet.create({
   screenContent: {
     width: '100%',
     alignItems: 'center',
-    paddingHorizontal: 16,
   },
   screenTitle: {
-    fontSize: 32,
-    fontWeight: '600',
+    fontSize: 34,
+    fontWeight: '700',
     color: '#FFFFFF',
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
     letterSpacing: -0.5,
+    lineHeight: 40,
   },
   screenSubtitle: {
-    fontSize: 16,
-    fontWeight: '300',
-    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 17,
+    fontWeight: '400',
+    color: '#BFA7FF',
     textAlign: 'center',
-    marginBottom: 40,
+    marginBottom: 48,
+    lineHeight: 24,
+    paddingHorizontal: 10,
   },
   inputContainer: {
     width: '100%',
@@ -647,7 +707,7 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 2,
-    borderColor: '#3B82F6',
+    borderColor: '#7C3AED',
     borderRadius: 22,
     paddingVertical: 20,
     paddingHorizontal: 24,
@@ -671,8 +731,9 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   optionCardSelected: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: 'rgba(124, 58, 237, 0.15)',
+    borderColor: '#7C3AED',
+    borderWidth: 2,
   },
   optionLeft: {
     flexDirection: 'row',
@@ -696,13 +757,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   radioCircleSelected: {
-    borderColor: 'rgba(255, 255, 255, 0.6)',
+    borderColor: '#7C3AED',
   },
   radioDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#FFFFFF',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#7C3AED',
   },
   interestsGrid: {
     width: '100%',
@@ -725,8 +786,9 @@ const styles = StyleSheet.create({
     width: '48%',
   },
   interestCardSelected: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: 'rgba(124, 58, 237, 0.15)',
+    borderColor: '#7C3AED',
+    borderWidth: 1.5,
   },
   interestPlus: {
     fontSize: 18,
@@ -734,10 +796,14 @@ const styles = StyleSheet.create({
   },
   interestText: {
     fontSize: 16,
-    fontWeight: '300',
-    color: '#FFFFFF',
+    fontWeight: '400',
+    color: 'rgba(255, 255, 255, 0.7)',
     flex: 1,
     textAlign: 'left',
+  },
+  interestTextSelected: {
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   streakCard: {
     width: '100%',
@@ -882,7 +948,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     fontSize: 14,
   },
-  // Home Screen
+  // Home Styles
   homeContainer: {
     flex: 1,
     backgroundColor: '#000000',
@@ -894,173 +960,127 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
-  homeTopBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  homeFlatList: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1,
+  },
+  affirmationPage: {
+    height: Dimensions.get('window').height,
+    width: SCREEN_WIDTH,
+    justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 32,
-    paddingTop: 16,
-    marginBottom: 8,
+    position: 'relative',
   },
-  homeTime: {
-    fontSize: 12,
-    fontWeight: '600',
+  homeMain: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    // Push text up slightly to make room for buttons
+    marginBottom: 80,
+  },
+  homeAffirmation: {
+    fontSize: 36, // Increased size
+    fontWeight: '700',
     color: '#FFFFFF',
+    textAlign: 'center',
+    lineHeight: 48,
+    letterSpacing: -0.5,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 10,
   },
-  homeStatus: {
+  cardActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    justifyContent: 'center',
+    gap: 40,
+    marginTop: 60,
   },
-  homeStatusText: {
-    fontSize: 12,
-    fontWeight: '600',
-    fontStyle: 'italic',
-    color: '#FFFFFF',
+  cardActionButton: {
+    padding: 12,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 50,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  homeTopOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 50,
   },
   homeHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    zIndex: 10,
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    height: 60,
   },
   homeHeaderButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   homeHeaderCenter: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 30,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   homeHeaderText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#E2E8F0',
-    letterSpacing: 1,
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 14,
   },
-  homeProgressBar: {
-    width: 80,
-    height: 6,
-    backgroundColor: 'rgba(226, 232, 240, 0.2)',
-    borderRadius: 3,
-    overflow: 'hidden',
+  homeBottomOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 50,
+    justifyContent: 'flex-end',
   },
-  homeProgressFill: {
-    height: '100%',
-    backgroundColor: '#D4AF37',
-  },
-  homeMain: {
-    flex: 1,
-    justifyContent: 'center',
+  homeActionsContainer: {
+    width: '100%',
     alignItems: 'center',
-    paddingHorizontal: 40,
-    zIndex: 10,
-  },
-  homeAffirmation: {
-    fontSize: 36,
-    fontWeight: '400',
-    color: '#D4AF37',
-    textAlign: 'center',
-    fontStyle: 'italic',
-    letterSpacing: -0.5,
-    lineHeight: 44,
-  },
-  homeActions: {
-    alignItems: 'center',
-    gap: 32,
-    paddingBottom: 48,
-    zIndex: 10,
-  },
-  homeActionButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 48,
-  },
-  homeActionButton: {
-    alignItems: 'center',
+    paddingBottom: 20,
   },
   homeSwipeHint: {
     alignItems: 'center',
-    gap: 4,
+    marginBottom: 20,
     opacity: 0.6,
-  },
-  homeSwipeText: {
-    fontSize: 10,
-    fontWeight: '500',
-    color: '#94A3B8',
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-  },
-  homeSwipeIndicator: {
-    width: 4,
-    height: 32,
-    borderRadius: 2,
-    backgroundColor: '#D4AF37',
-    opacity: 0.5,
   },
   homeNav: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '90%',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 32,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    justifyContent: 'space-between', // Spread buttons to corners
+    width: '100%',
+    paddingHorizontal: 40,
+    paddingVertical: 10,
   },
   homeNavButton: {
-    width: 56,
-    height: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  homeNavBadge: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#EF4444',
+    padding: 10,
   },
   homeNavCenter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 30,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-  },
-  homeNavText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#E2E8F0',
-    letterSpacing: 0.5,
+    flex: 1,
   },
   homeIndicator: {
-    height: 6,
-    width: 128,
-    backgroundColor: 'rgba(148, 163, 184, 0.3)',
+    height: 5,
+    width: 134,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 3,
     alignSelf: 'center',
     marginBottom: 8,

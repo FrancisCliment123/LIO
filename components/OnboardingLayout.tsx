@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
-import { BlurView } from 'expo-blur';
+import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { StarParticles } from './StarParticles';
+import { CinematicBackground } from './CinematicBackground';
 
 interface OnboardingLayoutProps {
   children: React.ReactNode;
@@ -26,11 +27,7 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
 }) => {
   return (
     <View style={styles.container}>
-      {/* Ethereal Background */}
-      <View style={styles.etherealBg} />
-      
-      {/* Star Particles */}
-      <StarParticles />
+      <CinematicBackground />
 
       {/* Header / Skip */}
       <SafeAreaView style={styles.header}>
@@ -42,9 +39,13 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
       </SafeAreaView>
 
       {/* Main Content */}
-      <View style={styles.mainContent}>
+      <ScrollView
+        style={styles.mainContent}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {children}
-      </View>
+      </ScrollView>
 
       {/* Footer / Continue Button */}
       {!customFooter && (
@@ -52,9 +53,17 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
           <TouchableOpacity
             onPress={onContinue}
             disabled={!isValid}
-            style={[styles.continueButton, !isValid && styles.continueButtonDisabled]}
+            style={[styles.continueButtonWrapper, !isValid && styles.continueButtonDisabled]}
+            activeOpacity={0.9}
           >
-            <Text style={styles.continueText}>{continueText}</Text>
+            <LinearGradient
+              colors={['#4C1D95', '#6D28D9', '#7C3AED']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.continueButtonGradient}
+            >
+              <Text style={styles.continueText}>{continueText}</Text>
+            </LinearGradient>
           </TouchableOpacity>
           <View style={styles.progressBar} />
         </View>
@@ -66,27 +75,21 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#070A1A',
     position: 'relative',
   },
-  etherealBg: {
+  header: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    bottom: 0,
-    backgroundColor: '#000000',
-    // Add gradient effect with LinearGradient if needed
-  },
-  header: {
-    position: 'relative',
     zIndex: 20,
-    paddingTop: 56,
     paddingHorizontal: 32,
     alignItems: 'flex-end',
   },
   skipButton: {
     padding: 8,
+    marginTop: 10,
   },
   skipText: {
     color: '#FFFFFF',
@@ -96,12 +99,15 @@ const styles = StyleSheet.create({
   },
   mainContent: {
     flex: 1,
-    position: 'relative',
     zIndex: 10,
+    width: '100%',
+  },
+  scrollContent: {
     paddingHorizontal: 24,
-    justifyContent: 'center',
+    paddingTop: 100, // Safe space for title below status bar
+    paddingBottom: 40,
     alignItems: 'center',
-    marginTop: -24,
+    flexGrow: 1,
   },
   footer: {
     position: 'relative',
@@ -110,28 +116,39 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     paddingTop: 16,
     alignItems: 'center',
-  },
-  continueButton: {
     width: '100%',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: 'transparent',
+  },
+  continueButtonWrapper: {
+    width: '100%',
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
+    borderRadius: 30,
+  },
+  continueButtonGradient: {
+    width: '100%',
     paddingVertical: 20,
     borderRadius: 30,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   continueButtonDisabled: {
     opacity: 0.5,
   },
   continueText: {
-    color: '#000000',
+    color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '600',
     letterSpacing: 0.5,
   },
   progressBar: {
-    width: 128,
-    height: 6,
+    width: 60,
+    height: 4,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 3,
-    marginTop: 16,
+    borderRadius: 2,
+    marginTop: 24,
   },
 });
