@@ -369,7 +369,11 @@ const GenderScreen: React.FC<{
 };
 
 // Home Screen
-const HomeScreen: React.FC<{ onReset: () => void; userData: OnboardingData }> = ({ onReset, userData }) => {
+const HomeScreen: React.FC<{
+  onReset: () => void;
+  onNavigate: (screen: ScreenName) => void;
+  userData: OnboardingData
+}> = ({ onReset, onNavigate, userData }) => {
   const [affirmations, setAffirmations] = useState<Affirmation[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -419,15 +423,8 @@ const HomeScreen: React.FC<{ onReset: () => void; userData: OnboardingData }> = 
 
   return (
     <View style={styles.homeContainer}>
-      {/* Background Gradient */}
-      <LinearGradient
-        colors={['#000000', '#0a0a0a', '#000000']}
-        style={styles.homeGradient}
-      />
-      <LinearGradient
-        colors={['transparent', 'rgba(212, 175, 55, 0.05)']}
-        style={styles.homeGradient}
-      />
+      <CinematicBackground />
+
 
       {/* Main Swipeable Content */}
       <FlatList
@@ -445,8 +442,14 @@ const HomeScreen: React.FC<{ onReset: () => void; userData: OnboardingData }> = 
         style={styles.homeFlatList}
         ListEmptyComponent={
           <View style={[styles.affirmationPage, { justifyContent: 'center', alignItems: 'center' }]}>
-            <ActivityIndicator size="large" color="#D4AF37" />
-            <Text style={{ color: 'rgba(255,255,255,0.5)', marginTop: 20 }}>Conectando con el universo...</Text>
+            <ActivityIndicator size="large" color="#af25f4" />
+            <Text style={{
+              color: '#E9D5FF',
+              marginTop: 20,
+              fontSize: 16,
+              fontWeight: '500',
+              fontFamily: 'System'
+            }}>Conectando con el universo...</Text>
           </View>
         }
       />
@@ -459,12 +462,12 @@ const HomeScreen: React.FC<{ onReset: () => void; userData: OnboardingData }> = 
           </TouchableOpacity>
 
           <View style={styles.homeHeaderCenter}>
-            <MaterialIcons name="favorite" size={16} color="#D4AF37" />
+            <MaterialIcons name="favorite" size={16} color="#af25f4" />
             <Text style={styles.homeHeaderText}>{affirmations.length}</Text>
           </View>
 
           <TouchableOpacity style={styles.homeHeaderButton}>
-            <MaterialIcons name="workspace-premium" size={24} color="#D4AF37" />
+            <MaterialIcons name="workspace-premium" size={24} color="#af25f4" />
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -480,7 +483,7 @@ const HomeScreen: React.FC<{ onReset: () => void; userData: OnboardingData }> = 
 
           {/* Bottom Nav Bar - Minimalist */}
           <View style={styles.homeNav}>
-            <TouchableOpacity style={styles.homeNavButton}>
+            <TouchableOpacity style={styles.homeNavButton} onPress={() => onNavigate(ScreenName.CATEGORIES)}>
               <MaterialIcons name="grid-view" size={28} color="rgba(255, 255, 255, 0.4)" />
             </TouchableOpacity>
 
@@ -497,6 +500,8 @@ const HomeScreen: React.FC<{ onReset: () => void; userData: OnboardingData }> = 
     </View>
   );
 };
+
+import { CategoriesScreen } from './components/CategoriesScreen';
 
 // Main App Component
 const App: React.FC = () => {
@@ -560,17 +565,23 @@ const App: React.FC = () => {
           onNext={() => setScreen(ScreenName.HOME)}
         />;
       case ScreenName.HOME:
-        return <HomeScreen onReset={() => setScreen(ScreenName.WELCOME)} userData={formData} />;
+        return <HomeScreen
+          onReset={() => setScreen(ScreenName.WELCOME)}
+          onNavigate={(s) => setScreen(s)}
+          userData={formData}
+        />;
+      case ScreenName.CATEGORIES:
+        return <CategoriesScreen onBack={() => setScreen(ScreenName.HOME)} />;
       default:
         return <View><Text>Unknown Screen</Text></View>;
     }
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={[styles.safeArea, { backgroundColor: '#1c1022' }]}>
       <StatusBar style="light" />
       {renderScreen()}
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -966,7 +977,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    zIndex: 1,
+    zIndex: 10,
   },
   affirmationPage: {
     height: Dimensions.get('window').height,

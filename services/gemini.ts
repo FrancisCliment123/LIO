@@ -30,23 +30,39 @@ export const generateAffirmationsBatch = async (userData: OnboardingData, count:
         const shuffledThemes = themes.sort(() => 0.5 - Math.random()).slice(0, count);
 
         // STRATEGY: PLAIN TEXT + SEPARATORS (NO JSON)
-        // This avoids syntax errors and "hallucinated" closing characters common in JSON responses.
+        // High-End Copywriting persona for premium feel.
         const prompt = `
-      Eres una IA compasiva y motivadora llamada Lio.
-      Genera ${count} afirmaciones para: ${userData.name}, Edad: ${userData.ageRange}.
-      Temas: ${shuffledThemes.join(", ")}.
+      Eres un experto redactor de contenido "premium" para una app de bienestar y mindfulness de alto nivel.
+      Tu objetivo es generar afirmaciones que vendan, que impacten y que se sientan profundas y elegantes.
+      
+      Usuario: ${userData.name}, Edad: ${userData.ageRange}.
+      Temas sugeridos: ${shuffledThemes.join(", ")}.
 
-      INSTRUCCIONES ESTRICTAS:
-      1. Devuelve las frases en TEXTO PLANO.
+      ESTILO "PREMIUM" (OBLIGATORIO):
+      - Frases CORTAS y PODEROSAS (Máximo 10 palabras).
+      - Tono: Seguro, calmado, elegante y directo al corazón.
+      - Gramática PERFECTA.
+      - EVITA lo cursi, lo genérico o lo infantil.
+      - EVITA "Intro" o "Relleno". Solo la frase.
+
+      EJEMPLOS DE ESTILO (Sigue esta calidad):
+      - "Mi trabajo es una fuente de satisfacción y orgullo."
+      - "Soy fuerte y resiliente en tiempos dificiles."
+      - "Soy merecedor de relaciones que me nutren."
+      - "Siempre estaré orgulloso de todo lo que he logrado."
+      - "Está bien tener miedo."
+      - "Mis problemas están llegando a su fin."
+      - "La ansiedad no controla mis acciones."
+      - "Acepto conscientemente todo lo que es bueno."
+
+      INSTRUCCIONES TÉCNICAS:
+      1. Genera ${count} afirmaciones distintas.
       2. Separa cada frase EXACTAMENTE con "|||".
-      3. NO numeres las frases (ni 1. ni -).
-      4. NADA de comillas, corchetes o JSON.
-      5. GRAMÁTICA PERFECTA. 
-      6. IMPACTO INMEDIATO: Frases MUY CORTAS (máximo 8 palabras). Directas al corazón.
-      7. CUIDADO AL FINAL: Asegúrate de que la frase termine en una palabra completa y un punto. NO pongas letras sueltas.
-
-      Ejemplo de salida correcta:
-      Soy fuerte y capaz|||Merezco paz y amor|||Hoy es un gran día
+      3. NO uses comillas, ni números, ni guiones al inicio.
+      4. NUNCA rompas la línea en mitad de la frase.
+      
+      Salida esperada:
+      Frase 1...|||Frase 2...|||Frase 3...
     `;
 
         const result = await model.generateContent(prompt);
@@ -63,29 +79,31 @@ export const generateAffirmationsBatch = async (userData: OnboardingData, count:
 
         const cleanAffirmations = rawAffirmations
             .map(t => {
-                // A. Aggressive cleanup of wrapper characters
-                let cleaned = t.trim().replace(/^["'\-\d\.]+|["'\-\d\.]+$/g, '').trim(); // Remove leading/trailing quotes, numbers, dashes
+                // A. Aggressive cleanup of wrapper characters AND leading punctuation
+                // Remove internal newlines to prevent weird breaking
+                let cleaned = t.replace(/[\n\r]+/g, ' ').trim();
 
-                // B. Remove internal quotes
+                // Remove leading quotes, dashes, numbers, COMMAS, dots
+                cleaned = cleaned.replace(/^["'\-\d\.,\s]+/, '');
+
+                // Remove trailing quotes
+                cleaned = cleaned.replace(/["']+$/, '');
+
+                // B. Remove internal quotes weirdness
                 cleaned = cleaned.replace(/["'«»“”]/g, '');
 
                 // C. THE KILLER FIX: Check for trailing garbage
-                // Split into words
                 const words = cleaned.split(/\s+/);
-
-                // If the last word is 1 char long and NOT "a" or "y" (very rare to end in these anyway), KILL IT.
-                // Examples: "paso D", "vida s"
                 if (words.length > 1) {
                     const lastWord = words[words.length - 1];
                     // Regex: single letter, case insensitive. 
                     if (/^[a-zA-ZáéíóúÁÉÍÓÚñÑ]$/.test(lastWord)) {
-                        // Remove last word
                         words.pop();
                         cleaned = words.join(" ");
                     }
                 }
 
-                return cleaned;
+                return cleaned.trim();
             })
             .filter(t => t.length > 10) // Filter out too short garbage
             .map(t => {

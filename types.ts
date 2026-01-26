@@ -8,6 +8,7 @@ export enum ScreenName {
   NOTIFICATIONS = 'NOTIFICATIONS',
   GENDER = 'GENDER',
   HOME = 'HOME',
+  CATEGORIES = 'CATEGORIES',
 }
 
 export interface OnboardingData {
