@@ -40,7 +40,6 @@ const GlassCard: React.FC<{ children: React.ReactNode; style?: any; onPress?: ()
 const WelcomeScreen: React.FC<{ onNext: () => void }> = ({ onNext }) => {
   return (
     <View style={styles.welcomeContainer}>
-      <CinematicBackground />
 
       <SafeAreaView style={styles.welcomeSafeArea}>
         {/* Logo/Video at the top */}
@@ -300,9 +299,10 @@ const NotificationScreen: React.FC<{
             source={require('./assets/lio-notification/Notification-remix.json')}
             autoPlay
             loop
+            resizeMode="contain"
             style={{
               width: '100%',
-              height: 200,
+              height: 300,
             }}
           />
         </View>
@@ -589,8 +589,9 @@ const App: React.FC = () => {
   };
 
   return (
-    <View style={[styles.safeArea, { backgroundColor: '#1c1022' }]}>
+    <View style={styles.safeArea}>
       <StatusBar style="light" />
+      <CinematicBackground />
       {renderScreen()}
     </View>
   );
@@ -599,12 +600,12 @@ const App: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#070A1A', // Global base color
   },
   // Welcome Screen
   welcomeContainer: {
     flex: 1,
-    backgroundColor: '#070A1A',
+    backgroundColor: 'transparent',
     position: 'relative',
   },
   etherealBg: {
@@ -874,8 +875,12 @@ const styles = StyleSheet.create({
   },
   notificationPreview: {
     width: '100%',
-    marginTop: 20,
-    padding: 20,
+    marginTop: 10,
+    marginBottom: 10,
+    padding: 0,
+    height: 300,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   notificationContent: {
     flexDirection: 'row',

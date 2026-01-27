@@ -32,7 +32,6 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
 }) => {
   return (
     <View style={styles.container}>
-      <CinematicBackground />
 
       {/* Header / Navigation */}
       <SafeAreaView style={styles.header}>
