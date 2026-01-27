@@ -291,7 +291,7 @@ const NotificationScreen: React.FC<{
     <OnboardingLayout onContinue={onNext} continueText="Permitir">
       <View style={styles.screenContent}>
         <Text style={styles.screenTitle}>Recibe afirmaciones a lo largo del día</Text>
-        <Text style={styles.screenSubtitle}>Leer afirmaciones regularmente te ayudará a alcanzar tus metas</Text>
+        <Text style={[styles.screenSubtitle, { marginBottom: 10 }]}>Leer afirmaciones regularmente te ayudará a alcanzar tus metas</Text>
 
         {/* Animated Notification Preview */}
         <View style={styles.notificationPreview}>
@@ -302,7 +302,7 @@ const NotificationScreen: React.FC<{
             resizeMode="contain"
             style={{
               width: '100%',
-              height: 300,
+              height: 420,
             }}
           />
         </View>
@@ -875,10 +875,10 @@ const styles = StyleSheet.create({
   },
   notificationPreview: {
     width: '100%',
-    marginTop: 10,
-    marginBottom: 10,
+    marginTop: 0,
+    marginBottom: 0,
     padding: 0,
-    height: 300,
+    height: 420,
     justifyContent: 'center',
     alignItems: 'center',
   },
