@@ -16,20 +16,21 @@ const removeBackgroundPath = (svgContent: string): string => {
   // This regex matches from <path fill="#231D4D" through all attributes and path data until z"/>
   const backgroundPathRegex = /<path\s+fill="#231D4D"[\s\S]*?d="[\s\S]*?z"\/>/;
   let cleaned = svgContent.replace(backgroundPathRegex, '');
-  
+
   // Improve SVG rendering quality - keep minimal to preserve all elements including borders
   // Only add shape-rendering for smooth edges, avoid properties that might hide borders
   cleaned = cleaned.replace(
     /<svg([^>]*)>/,
     `<svg$1 shape-rendering="geometricPrecision">`
   );
-  
+
   return cleaned;
 };
 
-export const GeminiSVG: React.FC<GeminiSVGProps> = ({ 
-  width = 260, 
-  height = 260
+export const GeminiSVG: React.FC<GeminiSVGProps & { showHalo?: boolean }> = ({
+  width = 260,
+  height = 260,
+  showHalo = true
 }) => {
   // Process SVG to remove only the background square, keep all other elements including white border
   const processedSvgContent = useMemo(() => {
@@ -71,13 +72,15 @@ export const GeminiSVG: React.FC<GeminiSVGProps> = ({
   return (
     <View style={[styles.container, { width, height: calculatedHeight }]} pointerEvents="none">
       {/* Halo/Glow behind logo */}
-      <View style={[styles.haloContainer, { width: haloSize, height: haloSize }]}>
-        <LinearGradient
-          colors={['rgba(167, 139, 250, 0.2)', 'rgba(167, 139, 250, 0.1)', 'transparent']}
-          style={[styles.halo, { width: haloSize, height: haloSize, borderRadius: haloSize / 2 }]}
-        />
-      </View>
-      
+      {showHalo && (
+        <View style={[styles.haloContainer, { width: haloSize, height: haloSize }]}>
+          <LinearGradient
+            colors={['rgba(167, 139, 250, 0.2)', 'rgba(167, 139, 250, 0.1)', 'transparent']}
+            style={[styles.halo, { width: haloSize, height: haloSize, borderRadius: haloSize / 2 }]}
+          />
+        </View>
+      )}
+
       {/* Logo with float animation */}
       <Animated.View
         style={[
@@ -90,9 +93,9 @@ export const GeminiSVG: React.FC<GeminiSVGProps> = ({
         ]}
       >
         <View style={styles.svgContainer}>
-          <SvgXml 
-            xml={processedSvgContent} 
-            width={width} 
+          <SvgXml
+            xml={processedSvgContent}
+            width={width}
             height={calculatedHeight}
           />
         </View>

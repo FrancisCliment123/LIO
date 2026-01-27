@@ -10,6 +10,7 @@ import { GeminiSVG } from './components/GeminiSVG';
 import { CinematicBackground } from './components/CinematicBackground';
 import { generateAffirmationsBatch, Affirmation } from './services/gemini';
 import { FlatList, ActivityIndicator } from 'react-native';
+import LottieView from 'lottie-react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -79,11 +80,24 @@ const WelcomeScreen: React.FC<{ onNext: () => void }> = ({ onNext }) => {
 const NameScreen: React.FC<{
   name: string;
   setName: (n: string) => void;
-  onNext: () => void
-}> = ({ name, setName, onNext }) => {
+  onNext: () => void;
+  onBack: () => void;
+}> = ({ name, setName, onNext, onBack }) => {
   return (
-    <OnboardingLayout onContinue={onNext} isValid={name.length > 0}>
+    <OnboardingLayout
+      onContinue={onNext}
+      onBack={onBack}
+      isValid={name.length > 0}
+      headerTitle="¿Cómo quieres que te llamemos?"
+      showSkip={false}
+    >
       <View style={styles.screenContent}>
+
+        {/* Logo Section */}
+        <View style={{ alignItems: 'center', marginBottom: 20 }}>
+          <GeminiSVG width={140} height={140} showHalo={false} />
+        </View>
+
         <Text style={styles.screenTitle}>¿Cómo quieres que te llamemos?</Text>
         <Text style={styles.screenSubtitle}>Tu nombre aparecerá en tus afirmaciones</Text>
 
@@ -280,22 +294,18 @@ const NotificationScreen: React.FC<{
         <Text style={styles.screenTitle}>Recibe afirmaciones a lo largo del día</Text>
         <Text style={styles.screenSubtitle}>Leer afirmaciones regularmente te ayudará a alcanzar tus metas</Text>
 
-        <GlassCard style={styles.notificationPreview}>
-          <View style={styles.notificationContent}>
-            <View style={styles.notificationIcon}>
-              <Text style={styles.notificationIconText}>Lio</Text>
-            </View>
-            <View style={styles.notificationBody}>
-              <View style={styles.notificationHeader}>
-                <Text style={styles.notificationTitle}>Lio</Text>
-                <Text style={styles.notificationTime}>Ahora</Text>
-              </View>
-              <Text style={styles.notificationMessage}>
-                Merezco la posibilidad de alcanzar mi máximo potencial.
-              </Text>
-            </View>
-          </View>
-        </GlassCard>
+        {/* Animated Notification Preview */}
+        <View style={styles.notificationPreview}>
+          <LottieView
+            source={require('./assets/lio-notification/Notification-remix.json')}
+            autoPlay
+            loop
+            style={{
+              width: '100%',
+              height: 200,
+            }}
+          />
+        </View>
 
         <View style={styles.optionsContainer}>
           <GlassCard style={styles.settingCard}>
@@ -531,6 +541,7 @@ const App: React.FC = () => {
           name={formData.name}
           setName={(v) => updateData({ name: v })}
           onNext={() => setScreen(ScreenName.AGE)}
+          onBack={() => setScreen(ScreenName.WELCOME)}
         />;
       case ScreenName.AGE:
         return <AgeScreen

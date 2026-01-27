@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { MaterialIcons } from '@expo/vector-icons';
 import { StarParticles } from './StarParticles';
 import { CinematicBackground } from './CinematicBackground';
 
@@ -8,8 +9,10 @@ interface OnboardingLayoutProps {
   children: React.ReactNode;
   onContinue: () => void;
   onSkip?: () => void;
+  onBack?: () => void;
   showSkip?: boolean;
   continueText?: string;
+  headerTitle?: string;
   isValid?: boolean;
   backgroundClass?: string;
   customFooter?: boolean;
@@ -19,8 +22,10 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
   children,
   onContinue,
   onSkip,
+  onBack,
   showSkip = true,
   continueText = 'Continuar',
+  headerTitle,
   isValid = true,
   backgroundClass,
   customFooter = false
@@ -29,13 +34,34 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
     <View style={styles.container}>
       <CinematicBackground />
 
-      {/* Header / Skip */}
+      {/* Header / Navigation */}
       <SafeAreaView style={styles.header}>
-        {showSkip && onSkip && (
-          <TouchableOpacity onPress={onSkip} style={styles.skipButton}>
-            <Text style={styles.skipText}>Saltar</Text>
-          </TouchableOpacity>
-        )}
+        <View style={styles.headerContent}>
+          {/* Left: Back Button */}
+          <View style={styles.headerLeft}>
+            {onBack && (
+              <TouchableOpacity onPress={onBack} style={styles.iconButton}>
+                <MaterialIcons name="arrow-back-ios" size={20} color="#FFF" />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Center: Title (Hidden/Subtle) */}
+          <View style={styles.headerCenter}>
+            {headerTitle && (
+              <Text style={styles.headerTitle}>{headerTitle}</Text>
+            )}
+          </View>
+
+          {/* Right: Skip Button */}
+          <View style={styles.headerRight}>
+            {showSkip && onSkip && (
+              <TouchableOpacity onPress={onSkip} style={styles.skipButton}>
+                <Text style={styles.skipText}>Saltar</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
       </SafeAreaView>
 
       {/* Main Content */}
@@ -84,12 +110,38 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 20,
-    paddingHorizontal: 32,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    height: 50, // Fixed height for header area
+  },
+  headerLeft: {
+    flex: 1,
+    alignItems: 'flex-start',
+  },
+  headerCenter: {
+    flex: 2,
+    alignItems: 'center',
+  },
+  headerRight: {
+    flex: 1,
     alignItems: 'flex-end',
+  },
+  headerTitle: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '400',
+    opacity: 0.5, // Subtle/hidden effect
+    letterSpacing: 0.5,
+  },
+  iconButton: {
+    padding: 8,
   },
   skipButton: {
     padding: 8,
-    marginTop: 10,
   },
   skipText: {
     color: '#FFFFFF',
