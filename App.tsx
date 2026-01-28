@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, TextInput, Dimensions } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { ScreenName, OnboardingData, INITIAL_DATA } from './types';
 import { OnboardingLayout } from './components/OnboardingLayout';
 import { StarParticles } from './components/StarParticles';
@@ -87,15 +87,13 @@ const NameScreen: React.FC<{
       onContinue={onNext}
       onBack={onBack}
       isValid={name.length > 0}
-      headerTitle="¿Cómo quieres que te llamemos?"
       showSkip={false}
+      currentStep={1}
+      totalSteps={7}
     >
       <View style={styles.screenContent}>
 
-        {/* Logo Section */}
-        <View style={{ alignItems: 'center', marginBottom: 20 }}>
-          <GeminiSVG width={140} height={140} showHalo={false} />
-        </View>
+
 
         <Text style={styles.screenTitle}>¿Cómo quieres que te llamemos?</Text>
         <Text style={styles.screenSubtitle}>Tu nombre aparecerá en tus afirmaciones</Text>
@@ -114,17 +112,19 @@ const NameScreen: React.FC<{
   );
 };
 
-// Age Screen
 const AgeScreen: React.FC<{
   selected: string;
   onSelect: (v: string) => void;
-  onNext: () => void
-}> = ({ selected, onSelect, onNext }) => {
+  onNext: () => void;
+  onBack: () => void;
+}> = ({ selected, onSelect, onNext, onBack }) => {
   const ranges = ["13 a 17", "18 a 24", "25 a 34", "35 a 44", "45 a 54", "+55"];
 
   return (
-    <OnboardingLayout onContinue={onNext} isValid={!!selected}>
+    <OnboardingLayout onContinue={onNext} onBack={onBack} isValid={!!selected} currentStep={2} totalSteps={7}>
       <View style={styles.screenContent}>
+
+
         <Text style={styles.screenTitle}>¿Cuántos años tienes?</Text>
         <Text style={styles.screenSubtitle}>Tu edad se usa para personalizar el contenido</Text>
 
@@ -150,12 +150,12 @@ const AgeScreen: React.FC<{
   );
 };
 
-// Interests Screen
 const InterestsScreen: React.FC<{
   selected: string[];
   toggle: (id: string) => void;
-  onNext: () => void
-}> = ({ selected, toggle, onNext }) => {
+  onNext: () => void;
+  onBack: () => void;
+}> = ({ selected, toggle, onNext, onBack }) => {
   const interests = [
     "Sueña a lo grande", "Sentirse atrevido", "Amor propio", "Niño interior",
     "Positividad", "Ansiedad", "Agradecimiento", "Voz interior",
@@ -163,8 +163,10 @@ const InterestsScreen: React.FC<{
   ];
 
   return (
-    <OnboardingLayout onContinue={onNext} isValid={selected.length > 0}>
+    <OnboardingLayout onContinue={onNext} onBack={onBack} isValid={selected.length > 0} currentStep={3} totalSteps={7}>
       <View style={styles.screenContent}>
+
+
         <Text style={styles.screenTitle}>¿Qué categorías te interesan?</Text>
         <Text style={styles.screenSubtitle}>Esto se usará para personalizar tu feed</Text>
 
@@ -198,40 +200,56 @@ const InterestsScreen: React.FC<{
 };
 
 // Streak Screen
-const StreakScreen: React.FC<{ onNext: () => void }> = ({ onNext }) => {
-  const days = ['Ma', 'Mi', 'Ju', 'Vi', 'Sa', 'Do', 'Lu'];
+const StreakScreen: React.FC<{ onNext: () => void; onBack: () => void }> = ({ onNext, onBack }) => {
+  const days = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa', 'Do'];
 
   return (
-    <OnboardingLayout onContinue={onNext} showSkip={false}>
+    <OnboardingLayout onContinue={onNext} onBack={onBack} showSkip={false} currentStep={4} totalSteps={7}>
       <View style={styles.screenContent}>
-        <Text style={styles.screenTitle}>Construye un hábito diario de práctica de afirmaciones</Text>
+        {/* Top Icon */}
+        <View style={{ alignItems: 'center', marginBottom: 20 }}>
+          <MaterialCommunityIcons name="fire" size={80} color="#FF9500" />
+        </View>
+
+        <Text style={styles.screenTitle}>Construye un hábito diario</Text>
+        <Text style={styles.screenSubtitle}>La constancia es la clave para un cambio duradero</Text>
 
         <GlassCard style={styles.streakCard}>
           <View style={styles.streakDays}>
-            {days.map((day, idx) => (
-              <View key={day} style={styles.streakDay}>
-                <Text style={[styles.streakDayLabel, idx === 0 && styles.streakDayLabelActive]}>
-                  {day}
-                </Text>
-                <View style={[styles.streakCircle, idx === 0 && styles.streakCircleActive]}>
-                  {idx === 0 && <MaterialIcons name="check" size={18} color="#FFFFFF" />}
+            {days.map((day, idx) => {
+              // Wednesday is Mi (index 2)
+              const isActive = idx === 2;
+              return (
+                <View key={day} style={styles.streakDay}>
+                  <Text style={[styles.streakDayLabel, isActive && styles.streakDayLabelActive]}>
+                    {day}
+                  </Text>
+                  <View style={[styles.streakCircle, isActive && styles.streakCircleActive]}>
+                    {isActive && <MaterialIcons name="check" size={16} color="#FFFFFF" />}
+                  </View>
                 </View>
-              </View>
-            ))}
+              );
+            })}
           </View>
-          <Text style={styles.streakText}>Construye una racha, día a día</Text>
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 10, backgroundColor: 'rgba(255, 149, 0, 0.1)', padding: 12, borderRadius: 16 }}>
+            <MaterialCommunityIcons name="fire" size={24} color="#FF9500" />
+            <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: 13, flex: 1, lineHeight: 18 }}>
+              Las personas con rachas de 7 días tienen 3 veces más probabilidades de formar hábitos duraderos
+            </Text>
+          </View>
         </GlassCard>
       </View>
     </OnboardingLayout>
   );
 };
 
-// Mental Health Screen
 const MentalHealthScreen: React.FC<{
   selected: string[];
   toggle: (v: string) => void;
-  onNext: () => void
-}> = ({ selected, toggle, onNext }) => {
+  onNext: () => void;
+  onBack: () => void;
+}> = ({ selected, toggle, onNext, onBack }) => {
   const options = [
     { text: "Gratitud", icon: "favorite" },
     { text: "Crecimiento personal", icon: "psychology" },
@@ -243,7 +261,7 @@ const MentalHealthScreen: React.FC<{
   ];
 
   return (
-    <OnboardingLayout onContinue={onNext}>
+    <OnboardingLayout onContinue={onNext} onBack={onBack} currentStep={5} totalSteps={7}>
       <View style={styles.screenContent}>
         <Text style={styles.screenTitle}>¿Qué quieres mejorar?</Text>
         <Text style={styles.screenSubtitle}>Elige al menos una para adaptar el contenido a tus necesidades</Text>
@@ -281,28 +299,30 @@ const NotificationScreen: React.FC<{
   data: OnboardingData;
   update: (d: Partial<OnboardingData>) => void;
   onNext: () => void;
-}> = ({ data, update, onNext }) => {
+  onBack: () => void;
+}> = ({ data, update, onNext, onBack }) => {
   const adjustCount = (amount: number) => {
     const newVal = Math.max(1, Math.min(50, data.notificationCount + amount));
     update({ notificationCount: newVal });
   };
 
   return (
-    <OnboardingLayout onContinue={onNext} continueText="Permitir">
+    <OnboardingLayout onContinue={onNext} onBack={onBack} continueText="Permitir" currentStep={6} totalSteps={7}>
       <View style={styles.screenContent}>
-        <Text style={styles.screenTitle}>Recibe afirmaciones a lo largo del día</Text>
-        <Text style={[styles.screenSubtitle, { marginBottom: 10 }]}>Leer afirmaciones regularmente te ayudará a alcanzar tus metas</Text>
+        <Text style={[styles.screenTitle, { marginBottom: 4, fontSize: 28, lineHeight: 34 }]}>Recibe afirmaciones a lo largo del día</Text>
+        <Text style={[styles.screenSubtitle, { marginBottom: 8, fontSize: 15 }]}>Leer afirmaciones regularmente te ayudará a alcanzar tus metas</Text>
 
         {/* Animated Notification Preview */}
         <View style={styles.notificationPreview}>
           <LottieView
             source={require('./assets/lio-notification/Notification-remix.json')}
             autoPlay
-            loop
+            loop={false}
             resizeMode="contain"
             style={{
               width: '100%',
-              height: 420,
+              height: 240,
+              alignSelf: 'center',
             }}
           />
         </View>
@@ -346,12 +366,13 @@ const NotificationScreen: React.FC<{
 const GenderScreen: React.FC<{
   selected: string;
   onSelect: (v: string) => void;
-  onNext: () => void
-}> = ({ selected, onSelect, onNext }) => {
+  onNext: () => void;
+  onBack: () => void;
+}> = ({ selected, onSelect, onNext, onBack }) => {
   const options = ["Femenino", "Masculino", "Otros", "Prefiero no decirlo"];
 
   return (
-    <OnboardingLayout onContinue={onNext} isValid={!!selected}>
+    <OnboardingLayout onContinue={onNext} onBack={onBack} isValid={!!selected} currentStep={7} totalSteps={7}>
       <View style={styles.screenContent}>
         <Text style={styles.screenTitle}>¿Qué opción te representa mejor?</Text>
         <Text style={styles.screenSubtitle}>Algunas afirmaciones usarán tu género o tus pronombres</Text>
@@ -548,32 +569,40 @@ const App: React.FC = () => {
           selected={formData.ageRange}
           onSelect={(v) => updateData({ ageRange: v })}
           onNext={() => setScreen(ScreenName.INTERESTS)}
+          onBack={() => setScreen(ScreenName.NAME)}
         />;
       case ScreenName.INTERESTS:
         return <InterestsScreen
           selected={formData.interests}
           toggle={(id) => toggleSelection('interests', id)}
           onNext={() => setScreen(ScreenName.STREAK)}
+          onBack={() => setScreen(ScreenName.AGE)}
         />;
       case ScreenName.STREAK:
-        return <StreakScreen onNext={() => setScreen(ScreenName.MENTAL_HEALTH)} />;
+        return <StreakScreen
+          onNext={() => setScreen(ScreenName.MENTAL_HEALTH)}
+          onBack={() => setScreen(ScreenName.INTERESTS)}
+        />;
       case ScreenName.MENTAL_HEALTH:
         return <MentalHealthScreen
           selected={formData.mentalHealthHabits}
           toggle={(id) => toggleSelection('mentalHealthHabits', id)}
           onNext={() => setScreen(ScreenName.NOTIFICATIONS)}
+          onBack={() => setScreen(ScreenName.STREAK)}
         />;
       case ScreenName.NOTIFICATIONS:
         return <NotificationScreen
           data={formData}
           update={updateData}
           onNext={() => setScreen(ScreenName.GENDER)}
+          onBack={() => setScreen(ScreenName.MENTAL_HEALTH)}
         />;
       case ScreenName.GENDER:
         return <GenderScreen
           selected={formData.gender}
           onSelect={(v) => updateData({ gender: v })}
           onNext={() => setScreen(ScreenName.HOME)}
+          onBack={() => setScreen(ScreenName.NOTIFICATIONS)}
         />;
       case ScreenName.HOME:
         return <HomeScreen
@@ -704,22 +733,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   screenTitle: {
-    fontSize: 34,
+    fontSize: 32,
     fontWeight: '700',
     color: '#FFFFFF',
     textAlign: 'center',
     marginBottom: 16,
     letterSpacing: -0.5,
-    lineHeight: 40,
+    lineHeight: 38,
   },
   screenSubtitle: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '400',
-    color: '#BFA7FF',
+    color: 'rgba(255, 255, 255, 0.7)',
     textAlign: 'center',
-    marginBottom: 48,
+    marginBottom: 40,
     lineHeight: 24,
-    paddingHorizontal: 10,
+    paddingHorizontal: 20,
   },
   inputContainer: {
     width: '100%',
@@ -739,8 +768,8 @@ const styles = StyleSheet.create({
   },
   optionsContainer: {
     width: '100%',
-    gap: 12,
-    marginTop: 20,
+    gap: 8,
+    marginTop: 8,
   },
   optionCard: {
     flexDirection: 'row',
@@ -793,8 +822,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
-    paddingHorizontal: 16,
-    marginTop: 20,
+    marginTop: 10,
+    justifyContent: 'center', // Center chips
   },
   interestCard: {
     flexDirection: 'row',
@@ -802,27 +831,22 @@ const styles = StyleSheet.create({
     gap: 8,
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: 30,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.15)',
-    width: '48%',
+    // Removed fixed width for chip style
   },
   interestCardSelected: {
     backgroundColor: 'rgba(124, 58, 237, 0.15)',
     borderColor: '#7C3AED',
     borderWidth: 1.5,
   },
-  interestPlus: {
-    fontSize: 18,
-    color: '#FFFFFF',
-  },
   interestText: {
     fontSize: 16,
     fontWeight: '400',
     color: 'rgba(255, 255, 255, 0.7)',
-    flex: 1,
-    textAlign: 'left',
+    // Check this: removed flex: 1 and textAlign to fit content
   },
   interestTextSelected: {
     color: '#FFFFFF',
@@ -876,9 +900,9 @@ const styles = StyleSheet.create({
   notificationPreview: {
     width: '100%',
     marginTop: 0,
-    marginBottom: 0,
+    marginBottom: 8,
     padding: 0,
-    height: 420,
+    height: 240,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -928,9 +952,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    marginBottom: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    marginBottom: 0,
   },
   settingLabel: {
     fontSize: 18,
@@ -1007,8 +1031,8 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    // Push text up slightly to make room for buttons
-    marginBottom: 80,
+    // Removed excessive margin to center content better
+    marginBottom: 0,
   },
   homeAffirmation: {
     fontSize: 36, // Increased size

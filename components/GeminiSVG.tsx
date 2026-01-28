@@ -9,41 +9,26 @@ interface GeminiSVGProps {
   height?: number;
 }
 
-// Remove the background path (fill="#231D4D") from SVG content
-const removeBackgroundPath = (svgContent: string): string => {
-  // Match the complete self-closing path element that starts with fill="#231D4D"
-  // The path tag spans multiple lines: <path fill="#231D4D" ... d="...z"/>
-  // This regex matches from <path fill="#231D4D" through all attributes and path data until z"/>
-  const backgroundPathRegex = /<path\s+fill="#231D4D"[\s\S]*?d="[\s\S]*?z"\/>/;
-  let cleaned = svgContent.replace(backgroundPathRegex, '');
+// SVG content is now pre-processed (background removed + shape-rendering added)
+// to avoid expensive runtime regex operations
 
-  // Improve SVG rendering quality - keep minimal to preserve all elements including borders
-  // Only add shape-rendering for smooth edges, avoid properties that might hide borders
-  cleaned = cleaned.replace(
-    /<svg([^>]*)>/,
-    `<svg$1 shape-rendering="geometricPrecision">`
-  );
 
-  return cleaned;
-};
+export const GeminiSVG = React.memo<GeminiSVGProps & { showHalo?: boolean }>((
+  {
+    width = 260,
+    height = 260,
+    showHalo = true
+  }) => {
+  // Use pre-processed SVG directly
+  const svgXml = GEMINI_SVG_CONTENT;
 
-export const GeminiSVG: React.FC<GeminiSVGProps & { showHalo?: boolean }> = ({
-  width = 260,
-  height = 260,
-  showHalo = true
-}) => {
-  // Process SVG to remove only the background square, keep all other elements including white border
-  const processedSvgContent = useMemo(() => {
-    // Only remove the first path with fill="#231D4D" (the background square)
-    // All other paths including white borders are preserved
-    return removeBackgroundPath(GEMINI_SVG_CONTENT);
-  }, []);
-
-  // Float animation
+  // Float animation - only run when showHalo is true for better performance
   const floatAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.loop(
+    if (!showHalo) return; // Skip animation if halo is disabled
+
+    const animation = Animated.loop(
       Animated.sequence([
         Animated.timing(floatAnim, {
           toValue: 1,
@@ -56,8 +41,12 @@ export const GeminiSVG: React.FC<GeminiSVGProps & { showHalo?: boolean }> = ({
           useNativeDriver: true,
         }),
       ])
-    ).start();
-  }, [floatAnim]);
+    );
+
+    animation.start();
+
+    return () => animation.stop();
+  }, [floatAnim, showHalo]);
 
   const translateY = floatAnim.interpolate({
     inputRange: [0, 1],
@@ -88,13 +77,13 @@ export const GeminiSVG: React.FC<GeminiSVGProps & { showHalo?: boolean }> = ({
           {
             width,
             height: calculatedHeight,
-            transform: [{ translateY }],
+            transform: showHalo ? [{ translateY }] : [], // Only animate if halo is enabled
           },
         ]}
       >
         <View style={styles.svgContainer}>
           <SvgXml
-            xml={processedSvgContent}
+            xml={svgXml}
             width={width}
             height={calculatedHeight}
           />
@@ -102,7 +91,7 @@ export const GeminiSVG: React.FC<GeminiSVGProps & { showHalo?: boolean }> = ({
       </Animated.View>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {

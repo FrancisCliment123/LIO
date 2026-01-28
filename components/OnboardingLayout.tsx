@@ -16,6 +16,8 @@ interface OnboardingLayoutProps {
   isValid?: boolean;
   backgroundClass?: string;
   customFooter?: boolean;
+  currentStep?: number;
+  totalSteps?: number;
 }
 
 export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
@@ -28,7 +30,9 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
   headerTitle,
   isValid = true,
   backgroundClass,
-  customFooter = false
+  customFooter = false,
+  currentStep,
+  totalSteps = 4
 }) => {
   return (
     <View style={styles.container}>
@@ -45,10 +49,20 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
             )}
           </View>
 
-          {/* Center: Title (Hidden/Subtle) */}
+          {/* Center: Progress Bar */}
           <View style={styles.headerCenter}>
-            {headerTitle && (
-              <Text style={styles.headerTitle}>{headerTitle}</Text>
+            {currentStep && totalSteps && (
+              <View style={styles.progressBarContainer}>
+                {Array.from({ length: totalSteps }).map((_, index) => (
+                  <View
+                    key={index}
+                    style={[
+                      styles.progressSegment,
+                      index < currentStep && styles.progressSegmentActive
+                    ]}
+                  />
+                ))}
+              </View>
             )}
           </View>
 
@@ -124,6 +138,20 @@ const styles = StyleSheet.create({
   headerCenter: {
     flex: 2,
     alignItems: 'center',
+  },
+  progressBarContainer: {
+    flexDirection: 'row',
+    gap: 6,
+    alignItems: 'center',
+  },
+  progressSegment: {
+    width: 32,
+    height: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 2,
+  },
+  progressSegmentActive: {
+    backgroundColor: '#A78BFA',
   },
   headerRight: {
     flex: 1,

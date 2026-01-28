@@ -25,7 +25,12 @@ export const generateAffirmationsBatch = async (userData: OnboardingData, count:
             throw new Error("API Key missing");
         }
 
-        const themes = ["gratitud", "fuerza interior", "esperanza", "calma", "éxito", "amor propio", "abundancia", "merecimiento", "presente", "confianza"];
+        const themes = [
+            "gratitud", "fuerza interior", "esperanza", "calma", "éxito",
+            "amor propio", "confianza", "presente", "superación", "paz mental",
+            "propósito", "valentía", "claridad", "autocuidado", "resiliencia",
+            "creatividad", "equilibrio", "libertad", "sabiduría", "autenticidad"
+        ];
         // Shuffle themes
         const shuffledThemes = themes.sort(() => 0.5 - Math.random()).slice(0, count);
 
@@ -45,7 +50,15 @@ export const generateAffirmationsBatch = async (userData: OnboardingData, count:
       - EVITA lo cursi, lo genérico o lo infantil.
       - EVITA "Intro" o "Relleno". Solo la frase.
 
-      EJEMPLOS DE ESTILO (Sigue esta calidad):
+      REGLAS DE VARIEDAD (CRÍTICO):
+      - NUNCA repitas las mismas palabras clave entre afirmaciones
+      - PROHIBIDO usar palabras cliché como: "abundancia", "irradia", "fluye", "energía positiva", "universo"
+      - Usa vocabulario DIVERSO, natural y específico
+      - Cada frase debe tener estructura sintáctica DIFERENTE
+      - NO cambies solo 1-2 palabras de la misma frase base
+      - Piensa en afirmaciones completamente ÚNICAS en contenido y forma
+
+      EJEMPLOS DE ESTILO (Nota la VARIEDAD de estructura):
       - "Mi trabajo es una fuente de satisfacción y orgullo."
       - "Soy fuerte y resiliente en tiempos dificiles."
       - "Soy merecedor de relaciones que me nutren."
