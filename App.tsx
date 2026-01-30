@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, TextInput, Dimensions } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, TextInput, Dimensions, Animated, Modal } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -89,7 +89,7 @@ const NameScreen: React.FC<{
       isValid={name.length > 0}
       showSkip={false}
       currentStep={1}
-      totalSteps={7}
+      totalSteps={8}
     >
       <View style={styles.screenContent}>
 
@@ -121,7 +121,7 @@ const AgeScreen: React.FC<{
   const ranges = ["13 a 17", "18 a 24", "25 a 34", "35 a 44", "45 a 54", "+55"];
 
   return (
-    <OnboardingLayout onContinue={onNext} onBack={onBack} isValid={!!selected} currentStep={2} totalSteps={7}>
+    <OnboardingLayout onContinue={onNext} onBack={onBack} isValid={!!selected} currentStep={2} totalSteps={8}>
       <View style={styles.screenContent}>
 
 
@@ -163,7 +163,7 @@ const InterestsScreen: React.FC<{
   ];
 
   return (
-    <OnboardingLayout onContinue={onNext} onBack={onBack} isValid={selected.length > 0} currentStep={3} totalSteps={7}>
+    <OnboardingLayout onContinue={onNext} onBack={onBack} isValid={selected.length > 0} currentStep={3} totalSteps={8}>
       <View style={styles.screenContent}>
 
 
@@ -202,9 +202,27 @@ const InterestsScreen: React.FC<{
 // Streak Screen
 const StreakScreen: React.FC<{ onNext: () => void; onBack: () => void }> = ({ onNext, onBack }) => {
   const days = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa', 'Do'];
+  const pulseAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 3000,
+          useNativeDriver: false,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 0,
+          duration: 3000,
+          useNativeDriver: false,
+        }),
+      ])
+    ).start();
+  }, []);
 
   return (
-    <OnboardingLayout onContinue={onNext} onBack={onBack} showSkip={false} currentStep={4} totalSteps={7}>
+    <OnboardingLayout onContinue={onNext} onBack={onBack} showSkip={false} currentStep={4} totalSteps={8}>
       <View style={styles.screenContent}>
         {/* Top Icon */}
         <View style={{ alignItems: 'center', marginBottom: 20 }}>
@@ -224,8 +242,28 @@ const StreakScreen: React.FC<{ onNext: () => void; onBack: () => void }> = ({ on
                   <Text style={[styles.streakDayLabel, isActive && styles.streakDayLabelActive]}>
                     {day}
                   </Text>
-                  <View style={[styles.streakCircle, isActive && styles.streakCircleActive]}>
-                    {isActive && <MaterialIcons name="check" size={16} color="#FFFFFF" />}
+                  <View style={[styles.streakCircle, isActive && styles.streakCircleActive, isActive && { overflow: 'hidden' }]}>
+                    {isActive ? (
+                      <>
+                        <Animated.View style={{
+                          position: 'absolute',
+                          width: '200%',
+                          height: '100%',
+                          left: pulseAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: ['-100%', '0%']
+                          })
+                        }}>
+                          <LinearGradient
+                            colors={['#7C3AED', '#9061F9', '#7C3AED']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={{ flex: 1 }}
+                          />
+                        </Animated.View>
+                        <MaterialIcons name="check" size={16} color="#FFFFFF" />
+                      </>
+                    ) : null}
                   </View>
                 </View>
               );
@@ -261,7 +299,7 @@ const MentalHealthScreen: React.FC<{
   ];
 
   return (
-    <OnboardingLayout onContinue={onNext} onBack={onBack} currentStep={5} totalSteps={7}>
+    <OnboardingLayout onContinue={onNext} onBack={onBack} currentStep={5} totalSteps={8}>
       <View style={styles.screenContent}>
         <Text style={styles.screenTitle}>¿Qué quieres mejorar?</Text>
         <Text style={styles.screenSubtitle}>Elige al menos una para adaptar el contenido a tus necesidades</Text>
@@ -301,62 +339,155 @@ const NotificationScreen: React.FC<{
   onNext: () => void;
   onBack: () => void;
 }> = ({ data, update, onNext, onBack }) => {
+  const [modalVisible, setModalVisible] = useState(false);
+  const [editingType, setEditingType] = useState<'start' | 'end' | null>(null);
+
   const adjustCount = (amount: number) => {
-    const newVal = Math.max(1, Math.min(50, data.notificationCount + amount));
+    const newVal = Math.max(1, Math.min(30, data.notificationCount + amount));
     update({ notificationCount: newVal });
   };
 
+  const hours = Array.from({ length: 24 }, (_, i) => `${i}:00`);
+
+  const selectTime = (time: string) => {
+    if (editingType === 'start') {
+      update({ startTime: time });
+    } else {
+      update({ endTime: time });
+    }
+    setModalVisible(false);
+    setEditingType(null);
+  };
+
   return (
-    <OnboardingLayout onContinue={onNext} onBack={onBack} continueText="Permitir" currentStep={6} totalSteps={7}>
+    <OnboardingLayout onContinue={onNext} onBack={onBack} continueText="Permitir" currentStep={6} totalSteps={8}>
       <View style={styles.screenContent}>
-        <Text style={[styles.screenTitle, { marginBottom: 4, fontSize: 28, lineHeight: 34 }]}>Recibe afirmaciones a lo largo del día</Text>
-        <Text style={[styles.screenSubtitle, { marginBottom: 8, fontSize: 15 }]}>Leer afirmaciones regularmente te ayudará a alcanzar tus metas</Text>
+        <Text style={[styles.screenTitle, { marginBottom: 4, fontSize: 26, lineHeight: 32 }]}>Recibe afirmaciones a lo largo del día</Text>
+        <Text style={[styles.screenSubtitle, { marginBottom: 0, fontSize: 14 }]}>Leer afirmaciones regularmente te ayudará a alcanzar tus metas</Text>
 
         {/* Animated Notification Preview */}
-        <View style={styles.notificationPreview}>
+        <View style={[styles.notificationPreview, { marginVertical: 8 }]}>
           <LottieView
-            source={require('./assets/lio-notification/Notification-remix.json')}
+            source={require('./assets/lio-notification/Noti-animation.json')}
             autoPlay
             loop={false}
             resizeMode="contain"
             style={{
               width: '100%',
-              height: 240,
+              height: 140,
               alignSelf: 'center',
             }}
           />
         </View>
 
-        <View style={styles.optionsContainer}>
-          <GlassCard style={styles.settingCard}>
+        <View style={[styles.optionsContainer, { gap: 6 }]}>
+          <GlassCard style={[styles.settingCard, { paddingVertical: 10 }]}>
             <Text style={styles.settingLabel}>Cantidad</Text>
             <View style={styles.settingControls}>
-              <TouchableOpacity onPress={() => adjustCount(-1)} style={styles.settingButton}>
+              <TouchableOpacity onPress={() => adjustCount(-1)} style={[styles.settingButton, { backgroundColor: '#7C3AED', borderColor: '#A78BFA' }]}>
                 <MaterialIcons name="remove" size={20} color="#FFFFFF" />
               </TouchableOpacity>
-              <Text style={styles.settingValue}>{data.notificationCount}x</Text>
-              <TouchableOpacity onPress={() => adjustCount(1)} style={styles.settingButton}>
+              <Text style={[styles.settingValue, { fontSize: 26, fontWeight: '700' }]}>{data.notificationCount}x</Text>
+              <TouchableOpacity onPress={() => adjustCount(1)} style={[styles.settingButton, { backgroundColor: '#7C3AED', borderColor: '#A78BFA' }]}>
                 <MaterialIcons name="add" size={20} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
           </GlassCard>
 
-          <GlassCard style={styles.settingCard}>
-            <Text style={styles.settingLabel}>Desde las</Text>
-            <View style={styles.settingTime}>
-              <Text style={styles.settingTimeText}>{data.startTime}</Text>
-              <MaterialIcons name="expand-more" size={16} color="#FFFFFF" />
-            </View>
-          </GlassCard>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => {
+              setEditingType('start');
+              setModalVisible(true);
+            }}
+          >
+            <GlassCard style={[styles.settingCard, { paddingVertical: 10 }]}>
+              <Text style={styles.settingLabel}>Desde las</Text>
+              <View style={styles.settingTime}>
+                <Text style={styles.settingTimeText}>{data.startTime}</Text>
+                <MaterialIcons name="expand-more" size={18} color="#A78BFA" />
+              </View>
+            </GlassCard>
+          </TouchableOpacity>
 
-          <GlassCard style={styles.settingCard}>
-            <Text style={styles.settingLabel}>Hasta las</Text>
-            <View style={styles.settingTime}>
-              <Text style={styles.settingTimeText}>{data.endTime}</Text>
-              <MaterialIcons name="expand-more" size={16} color="#FFFFFF" />
-            </View>
-          </GlassCard>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => {
+              setEditingType('end');
+              setModalVisible(true);
+            }}
+          >
+            <GlassCard style={[styles.settingCard, { paddingVertical: 10 }]}>
+              <Text style={styles.settingLabel}>Hasta las</Text>
+              <View style={styles.settingTime}>
+                <Text style={styles.settingTimeText}>{data.endTime}</Text>
+                <MaterialIcons name="expand-more" size={18} color="#A78BFA" />
+              </View>
+            </GlassCard>
+          </TouchableOpacity>
         </View>
+
+        {/* Dynamic Summary */}
+        <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, fontStyle: 'italic', textAlign: 'center', marginTop: 12, lineHeight: 18 }}>
+          Recibirás <Text style={{ color: '#A78BFA', fontWeight: '600' }}>{data.notificationCount}</Text> notificaciones al día entre las <Text style={{ color: '#A78BFA', fontWeight: '600' }}>{data.startTime}</Text> y las <Text style={{ color: '#A78BFA', fontWeight: '600' }}>{data.endTime}</Text>
+        </Text>
+
+        {/* Improved Time Selection Modal */}
+        <Modal
+          visible={modalVisible}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setModalVisible(false)}
+        >
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setModalVisible(false)}
+          >
+            <View style={styles.modalContent}>
+              <GlassCard style={styles.timePickerContainer}>
+                <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                  <Text style={[styles.modalTitle, { marginBottom: 0 }]}>
+                    {editingType === 'start' ? 'Hora de inicio' : 'Hora de fin'}
+                  </Text>
+                  <TouchableOpacity onPress={() => setModalVisible(false)}>
+                    <MaterialIcons name="close" size={24} color="rgba(255,255,255,0.5)" />
+                  </TouchableOpacity>
+                </View>
+
+                <FlatList
+                  data={hours}
+                  keyExtractor={(item) => item}
+                  style={{ width: '100%' }}
+                  initialScrollIndex={parseInt((editingType === 'start' ? data.startTime : data.endTime) || '0')}
+                  getItemLayout={(data, index) => (
+                    { length: 61, offset: 61 * index, index }
+                  )}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={[
+                        styles.timeRow,
+                        (editingType === 'start' ? data.startTime === item : data.endTime === item) && styles.timeRowActive
+                      ]}
+                      onPress={() => selectTime(item)}
+                    >
+                      <Text style={[
+                        styles.timeRowText,
+                        (editingType === 'start' ? data.startTime === item : data.endTime === item) && styles.timeRowTextActive
+                      ]}>
+                        {item}
+                      </Text>
+                      {(editingType === 'start' ? data.startTime === item : data.endTime === item) && (
+                        <MaterialIcons name="check" size={20} color="#A78BFA" />
+                      )}
+                    </TouchableOpacity>
+                  )}
+                  showsVerticalScrollIndicator={false}
+                />
+              </GlassCard>
+            </View>
+          </TouchableOpacity>
+        </Modal>
       </View>
     </OnboardingLayout>
   );
@@ -372,7 +503,7 @@ const GenderScreen: React.FC<{
   const options = ["Femenino", "Masculino", "Otros", "Prefiero no decirlo"];
 
   return (
-    <OnboardingLayout onContinue={onNext} onBack={onBack} isValid={!!selected} currentStep={7} totalSteps={7}>
+    <OnboardingLayout onContinue={onNext} onBack={onBack} isValid={!!selected} currentStep={7} totalSteps={8}>
       <View style={styles.screenContent}>
         <Text style={styles.screenTitle}>¿Qué opción te representa mejor?</Text>
         <Text style={styles.screenSubtitle}>Algunas afirmaciones usarán tu género o tus pronombres</Text>
@@ -397,7 +528,71 @@ const GenderScreen: React.FC<{
       </View>
     </OnboardingLayout>
   );
+}
+
+// Widget Screen
+const WidgetScreen: React.FC<{ onNext: () => void; onBack: () => void }> = ({ onNext, onBack }) => {
+  return (
+    <OnboardingLayout onContinue={onNext} onBack={onBack} showSkip={false} currentStep={8} totalSteps={8} continueText="Instalar widget">
+      <View style={styles.screenContent}>
+        {/* Icon with Glow Effect */}
+        <View style={styles.widgetIconContainer}>
+          <View style={styles.widgetIconBox}>
+            <MaterialIcons name="auto-awesome" size={48} color="#FFFFFF" />
+          </View>
+        </View>
+
+        <Text style={[styles.screenTitle, { marginTop: 40, fontSize: 24, paddingHorizontal: 20 }]}>Añade un widget a tu pantalla de inicio</Text>
+        <Text style={styles.screenSubtitle}>
+          Mantén tus afirmaciones a la vista durante todo el día con nuestros hermosos widgets
+        </Text>
+
+        {/* Phone Mockup */}
+        <View style={styles.widgetMockup}>
+          <View style={styles.widgetPhone}>
+            {/* Phone top notch */}
+            <View style={styles.widgetPhoneNotch} />
+
+            {/* Widget preview card */}
+            <View style={styles.widgetPreview}>
+              <View style={styles.widgetCard}>
+                <View style={styles.widgetCardIconContainer}>
+                  <LinearGradient
+                    colors={['#4C1D95', '#7C3AED']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.widgetCardIcon}
+                  >
+                    <MaterialIcons name="auto-awesome" size={20} color="#FFFFFF" />
+                  </LinearGradient>
+                </View>
+                <View style={styles.widgetCardText}>
+                  <Text style={styles.widgetCardLabel}>LIO</Text>
+                  <Text style={styles.widgetCardAffirmation}>Tu luz importa</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* App grid placeholder - 4x3 */}
+            <View style={styles.widgetAppGrid}>
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
+                <View key={i} style={styles.widgetAppIcon} />
+              ))}
+            </View>
+
+            {/* Bottom Dock */}
+            <View style={styles.widgetDock}>
+              {[1, 2, 3, 4].map((i) => (
+                <View key={i} style={styles.widgetDockIcon} />
+              ))}
+            </View>
+          </View>
+        </View>
+      </View>
+    </OnboardingLayout>
+  );
 };
+
 
 // Home Screen
 const HomeScreen: React.FC<{
@@ -601,8 +796,13 @@ const App: React.FC = () => {
         return <GenderScreen
           selected={formData.gender}
           onSelect={(v) => updateData({ gender: v })}
-          onNext={() => setScreen(ScreenName.HOME)}
+          onNext={() => setScreen(ScreenName.WIDGET)}
           onBack={() => setScreen(ScreenName.NOTIFICATIONS)}
+        />;
+      case ScreenName.WIDGET:
+        return <WidgetScreen
+          onNext={() => setScreen(ScreenName.HOME)}
+          onBack={() => setScreen(ScreenName.GENDER)}
         />;
       case ScreenName.HOME:
         return <HomeScreen
@@ -887,8 +1087,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   streakCircleActive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: '#7C3AED',
+    borderColor: '#A78BFA',
+    borderWidth: 1.5,
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 10,
+    elevation: 8,
   },
   streakText: {
     fontSize: 14,
@@ -980,7 +1186,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '500',
     fontSize: 18,
-    width: 32,
+    minWidth: 60,
     textAlign: 'center',
   },
   settingTime: {
@@ -1135,6 +1341,192 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     alignSelf: 'center',
     marginBottom: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 30,
+  },
+  modalContent: {
+    width: '100%',
+    maxHeight: '60%',
+  },
+  timePickerContainer: {
+    width: '100%',
+    padding: 24,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  timeRow: {
+    width: '100%',
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
+  },
+  timeRowActive: {
+    backgroundColor: 'rgba(124, 58, 237, 0.08)',
+  },
+  timeRowText: {
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 18,
+    fontWeight: '400',
+  },
+  timeRowTextActive: {
+    color: '#A78BFA',
+    fontWeight: '600',
+  },
+  // Widget Screen Styles
+  widgetIconContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+    position: 'relative',
+  },
+  widgetIconBox: {
+    width: 80,
+    height: 80,
+    borderRadius: 18,
+    backgroundColor: '#5B21B6',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transform: [{ rotate: '3deg' }],
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  widgetMockup: {
+    width: '100%',
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  widgetPhone: {
+    width: 280,
+    aspectRatio: 9 / 15, // Balanced height
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 40,
+    borderWidth: 4,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 15,
+    position: 'relative',
+  },
+  widgetPhoneNotch: {
+    position: 'absolute',
+    top: 0,
+    alignSelf: 'center', // Use flexbox centering instead of transform
+    width: 96,
+    height: 24,
+    backgroundColor: '#000000',
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+    zIndex: 20,
+  },
+  widgetPreview: {
+    width: '100%',
+    paddingTop: 32,
+    marginBottom: 12, // Reduced spacing
+  },
+  widgetCard: {
+    width: '100%',
+    backgroundColor: 'rgba(45, 42, 85, 0.9)',
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  widgetCardIconContainer: {
+    flexShrink: 0,
+  },
+  widgetCardIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  widgetCardText: {
+    flex: 1,
+    gap: 2,
+  },
+  widgetCardLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: 'rgba(255, 255, 255, 0.5)',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  widgetCardAffirmation: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.2,
+  },
+  widgetAppGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    rowGap: 12, // Reduced from 16 to fit 3 rows
+    paddingHorizontal: 0,
+    width: '100%',
+    justifyContent: 'center',
+    marginBottom: 16, // Reduced margin
+  },
+  widgetAppIcon: {
+    width: 48,
+    height: 48,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+  },
+  widgetDock: {
+    flexDirection: 'row',
+    justifyContent: 'center', // Changed from space-between to center to avoid edge collision
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 24,
+    padding: 12,
+    marginTop: 'auto',
+    marginBottom: 16,
+    width: '100%',
+    gap: 12, // Explicit gap handles separation
+  },
+  widgetDockIcon: {
+    width: 48,
+    height: 48,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 14,
   },
 });
 
