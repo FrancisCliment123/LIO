@@ -11,6 +11,7 @@ import { CinematicBackground } from './components/CinematicBackground';
 import { generateAffirmationsBatch, Affirmation } from './services/gemini';
 import { FlatList, ActivityIndicator } from 'react-native';
 import LottieView from 'lottie-react-native';
+import { registerForPushNotificationsAsync, scheduleTestNotification } from './services/notifications';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -432,6 +433,10 @@ const NotificationScreen: React.FC<{
           Recibirás <Text style={{ color: '#A78BFA', fontWeight: '600' }}>{data.notificationCount}</Text> notificaciones al día entre las <Text style={{ color: '#A78BFA', fontWeight: '600' }}>{data.startTime}</Text> y las <Text style={{ color: '#A78BFA', fontWeight: '600' }}>{data.endTime}</Text>
         </Text>
 
+        <TouchableOpacity onPress={scheduleTestNotification} style={{ marginTop: 15, alignSelf: 'center' }}>
+          <Text style={{ color: '#A78BFA', fontSize: 14, textDecorationLine: 'underline' }}>Probar notificación</Text>
+        </TouchableOpacity>
+
         {/* Improved Time Selection Modal */}
         <Modal
           visible={modalVisible}
@@ -737,6 +742,10 @@ const App: React.FC = () => {
   const updateData = (data: Partial<OnboardingData>) => {
     setFormData(prev => ({ ...prev, ...data }));
   };
+
+  useEffect(() => {
+    registerForPushNotificationsAsync();
+  }, []);
 
   const toggleSelection = (key: keyof OnboardingData, value: string) => {
     setFormData(prev => {

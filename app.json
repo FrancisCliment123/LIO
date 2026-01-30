@@ -4,7 +4,7 @@
     "slug": "lio",
     "version": "1.0.0",
     "orientation": "portrait",
-    "entryPoint": "./index.js",
+    "icon": "./assets/icon1024.png",
     "userInterfaceStyle": "dark",
     "splash": {
       "resizeMode": "contain",
@@ -17,16 +17,28 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.cisfransorganization.lio",
+      "icon": "./assets/icon1024.png",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "adaptiveIcon": {
+        "foregroundImage": "./assets/icon1024.png",
         "backgroundColor": "#000000"
       },
       "package": "com.cisfransorganization.lio"
     },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon1024.png",
+          "color": "#ffffff"
+        }
+      ],
+      "expo-font"
+    ],
     "extra": {
       "eas": {
         "projectId": "0d0caa8c-f6aa-41a8-befb-ca0c256bb062"
