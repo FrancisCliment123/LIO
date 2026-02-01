@@ -47,7 +47,24 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "0d0caa8c-f6aa-41a8-befb-ca0c256bb062"
+        "projectId": "0d0caa8c-f6aa-41a8-befb-ca0c256bb062",
+        "build": {
+          "experimental": {
+            "ios": {
+              "appExtensions": [
+                {
+                  "targetName": "widget",
+                  "bundleIdentifier": "com.cisfransorganization.lio.widget",
+                  "entitlements": {
+                    "com.apple.security.application-groups": [
+                      "group.com.cisfransorganization.lio"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        }
       }
     },
     "owner": "cisfrans-organization"
