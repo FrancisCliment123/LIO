@@ -11,7 +11,7 @@ import { CinematicBackground } from './components/CinematicBackground';
 import { generateAffirmationsBatch, Affirmation } from './services/gemini';
 import { FlatList, ActivityIndicator } from 'react-native';
 import LottieView from 'lottie-react-native';
-import { registerForPushNotificationsAsync, scheduleTestNotification } from './services/notifications';
+import { registerForPushNotificationsAsync, scheduleTestNotification, updateWidget } from './services/notifications';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -620,6 +620,11 @@ const HomeScreen: React.FC<{
       // Use the batch function to get multiple affirmations at once
       const newAffirmations = await generateAffirmationsBatch(userData, 3);
 
+      // Update widget with the first affirmation if available
+      if (newAffirmations.length > 0) {
+        updateWidget(newAffirmations[0].text);
+      }
+
       setAffirmations(prev => {
         // Prevent exact text duplicates
         const uniqueNew = newAffirmations.filter(n => !prev.some(p => p.text === n.text));
@@ -631,6 +636,7 @@ const HomeScreen: React.FC<{
       setLoading(false);
     }
   };
+
 
   const renderItem = ({ item }: { item: Affirmation }) => (
     <View style={styles.affirmationPage}>

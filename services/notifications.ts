@@ -111,9 +111,24 @@ const getRandomAffirmation = (): string => {
     return allAffirmations[randomIndex];
 };
 
+// Helper to update the widget
+export const updateWidget = (affirmation: string) => {
+    if (Platform.OS === 'ios') {
+        try {
+            const { ExtensionStorage } = require('@bacons/apple-targets');
+            const widgetStorage = new ExtensionStorage('group.com.cisfransorganization.lio');
+            widgetStorage.set('current_affirmation', affirmation);
+            widgetStorage.reloadWidget('LioWidget'); // Must match the widget 'kind' in Swift
+        } catch (e) {
+            console.log('Error updating widget:', e);
+        }
+    }
+};
+
 // Function to trigger a local test notification immediately (good for simulators/testing UI)
 export const scheduleTestNotification = async () => {
     const affirmation = getRandomAffirmation();
+    updateWidget(affirmation);
 
     await Notifications.scheduleNotificationAsync({
         content: {

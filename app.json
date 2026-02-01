@@ -4,7 +4,7 @@
     "slug": "lio",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon1024.png",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "splash": {
       "resizeMode": "contain",
@@ -13,31 +13,37 @@
     "assetBundlePatterns": [
       "**/*"
     ],
-    "newArchEnabled": false,
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.cisfransorganization.lio",
-      "icon": "./assets/icon1024.png",
+      "appleTeamId": "L8M5M9DCPC",
+      "entitlements": {
+        "com.apple.security.application-groups": [
+          "group.com.cisfransorganization.lio"
+        ]
+      },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/icon1024.png",
-        "backgroundColor": "#000000"
-      },
       "package": "com.cisfransorganization.lio"
     },
     "plugins": [
       [
         "expo-notifications",
         {
-          "icon": "./assets/icon1024.png",
+          "icon": "./assets/icon.png",
           "color": "#ffffff"
         }
       ],
-      "expo-font"
+      "expo-font",
+      "@bacons/apple-targets"
     ],
     "extra": {
       "eas": {
