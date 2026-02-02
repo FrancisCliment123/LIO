@@ -5,7 +5,6 @@ import { Platform } from 'react-native';
 // Configure how notifications behave when the app is in the foreground
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
-        shouldShowAlert: true,
         shouldPlaySound: true,
         shouldSetBadge: false,
         shouldShowBanner: true,
@@ -118,7 +117,13 @@ export const updateWidget = (affirmation: string) => {
             const { ExtensionStorage } = require('@bacons/apple-targets');
             const widgetStorage = new ExtensionStorage('group.com.cisfransorganization.lio');
             widgetStorage.set('current_affirmation', affirmation);
-            widgetStorage.reloadWidget('LioWidget'); // Must match the widget 'kind' in Swift
+
+            // Safety check: reloadWidget is only available in development builds
+            if (typeof widgetStorage.reloadWidget === 'function') {
+                widgetStorage.reloadWidget('LioWidget');
+            } else {
+                console.log('Widget reload skipped: Not supported in Expo Go.');
+            }
         } catch (e) {
             console.log('Error updating widget:', e);
         }

@@ -42,7 +42,8 @@
           "color": "#ffffff"
         }
       ],
-      "expo-font"
+      "expo-font",
+      "@bacons/apple-targets"
     ],
     "extra": {
       "eas": {

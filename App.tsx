@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, TextInput, Dimensions, Animated, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Dimensions, Animated, Modal } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -290,13 +291,13 @@ const MentalHealthScreen: React.FC<{
   onBack: () => void;
 }> = ({ selected, toggle, onNext, onBack }) => {
   const options = [
-    { text: "Gratitud", icon: "favorite" },
-    { text: "Crecimiento personal", icon: "psychology" },
-    { text: "Positividad corporal", icon: "self_improvement" },
-    { text: "Pensar en positivo", icon: "sentiment_satisfied" },
-    { text: "Amor", icon: "favorite" },
-    { text: "Felicidad", icon: "auto_awesome" },
-    { text: "Amarme a mí mismo", icon: "person" }
+    { text: "Gratitud", icon: "heart-outline" },
+    { text: "Crecimiento personal", icon: "brain" },
+    { text: "Positividad corporal", icon: "human-handsup" },
+    { text: "Pensar en positivo", icon: "emoticon-happy-outline" },
+    { text: "Amor", icon: "heart" },
+    { text: "Felicidad", icon: "creation" },
+    { text: "Amarme a mí mismo", icon: "account-outline" }
   ];
 
   return (
@@ -318,7 +319,7 @@ const MentalHealthScreen: React.FC<{
                 ]}
               >
                 <View style={styles.optionLeft}>
-                  <MaterialIcons name={opt.icon as any} size={24} color="#FFFFFF" />
+                  <MaterialCommunityIcons name={opt.icon as any} size={24} color="#FFFFFF" />
                   <Text style={styles.optionText}>{opt.text}</Text>
                 </View>
                 <View style={[styles.radioCircle, isSelected && styles.radioCircleSelected]}>
