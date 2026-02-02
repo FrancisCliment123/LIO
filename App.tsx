@@ -1257,11 +1257,11 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   homeAffirmation: {
-    fontSize: 36, // Increased size
+    fontSize: 28, // Reduced for better fit
     fontWeight: '700',
     color: '#FFFFFF',
     textAlign: 'center',
-    lineHeight: 48,
+    lineHeight: 38,
     letterSpacing: -0.5,
     textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: { width: 0, height: 2 },
@@ -1293,7 +1293,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 10,
+    paddingTop: 20, // Increased to avoid overlap with status bar
     height: 60,
   },
   homeHeaderButton: {
