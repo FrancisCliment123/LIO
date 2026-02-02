@@ -194,6 +194,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 20,
         paddingTop: 10,
+        marginTop: 50, // Push below status bar
         marginBottom: 10,
     },
     headerTitle: {

@@ -870,7 +870,7 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 45,
+    paddingTop: 90, // Slightly lower for better spacing
     paddingBottom: 24,
     zIndex: 3,
     backgroundColor: 'transparent',
@@ -1294,6 +1294,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 20, // Increased to avoid overlap with status bar
+    marginTop: 50, // Match Categories screen level
     height: 60,
   },
   homeHeaderButton: {
