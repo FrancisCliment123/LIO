@@ -10,6 +10,7 @@ export enum ScreenName {
   WIDGET = 'WIDGET',
   HOME = 'HOME',
   CATEGORIES = 'CATEGORIES',
+  FAVORITES = 'FAVORITES',
 }
 
 export interface OnboardingData {

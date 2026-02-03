@@ -13,6 +13,7 @@ import { generateAffirmationsBatch, Affirmation } from './services/gemini';
 import { FlatList, ActivityIndicator } from 'react-native';
 import LottieView from 'lottie-react-native';
 import { registerForPushNotificationsAsync, scheduleTestNotification, updateWidget } from './services/notifications';
+import { getFavorites, addFavorite, removeFavorite, getFavoritesCount } from './services/favorites';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -608,11 +609,39 @@ const HomeScreen: React.FC<{
 }> = ({ onReset, onNavigate, userData }) => {
   const [affirmations, setAffirmations] = useState<Affirmation[]>([]);
   const [loading, setLoading] = useState(false);
+  const [likedAffirmations, setLikedAffirmations] = useState<Set<string>>(new Set());
+  const [favoritesCount, setFavoritesCount] = useState(0);
 
   // Initial load
   React.useEffect(() => {
+    loadFavorites();
     loadMore();
   }, []);
+
+  const loadFavorites = async () => {
+    const favorites = await getFavorites();
+    const likedIds = new Set<string>(favorites.map(fav => fav.id));
+    setLikedAffirmations(likedIds);
+    setFavoritesCount(favorites.length);
+  };
+
+  const handleLike = async (affirmation: Affirmation) => {
+    const isLiked = likedAffirmations.has(affirmation.id);
+
+    if (isLiked) {
+      await removeFavorite(affirmation.id);
+      setLikedAffirmations(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(affirmation.id);
+        return newSet;
+      });
+      setFavoritesCount(prev => prev - 1);
+    } else {
+      await addFavorite(affirmation);
+      setLikedAffirmations(prev => new Set([...prev, affirmation.id]));
+      setFavoritesCount(prev => prev + 1);
+    }
+  };
 
   const loadMore = async () => {
     if (loading) return;
@@ -639,25 +668,36 @@ const HomeScreen: React.FC<{
   };
 
 
-  const renderItem = ({ item }: { item: Affirmation }) => (
-    <View style={styles.affirmationPage}>
-      <View style={styles.homeMain}>
-        <Text style={styles.homeAffirmation}>
-          {item.text}
-        </Text>
-      </View>
+  const renderItem = ({ item }: { item: Affirmation }) => {
+    const isLiked = likedAffirmations.has(item.id);
 
-      {/* Action Buttons INSIDE the scrollable page */}
-      <View style={styles.cardActions}>
-        <TouchableOpacity style={styles.cardActionButton}>
-          <MaterialIcons name="share" size={28} color="rgba(255,255,255,0.8)" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.cardActionButton}>
-          <MaterialIcons name="favorite-border" size={32} color="rgba(255,255,255,0.8)" />
-        </TouchableOpacity>
+    return (
+      <View style={styles.affirmationPage}>
+        <View style={styles.homeMain}>
+          <Text style={styles.homeAffirmation}>
+            {item.text}
+          </Text>
+        </View>
+
+        {/* Action Buttons INSIDE the scrollable page */}
+        <View style={styles.cardActions}>
+          <TouchableOpacity style={styles.cardActionButton}>
+            <MaterialIcons name="share" size={28} color="rgba(255,255,255,0.8)" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.cardActionButton}
+            onPress={() => handleLike(item)}
+          >
+            <MaterialIcons
+              name={isLiked ? "favorite" : "favorite-border"}
+              size={32}
+              color={isLiked ? "#ef4444" : "rgba(255,255,255,0.8)"}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <View style={styles.homeContainer}>
@@ -701,7 +741,7 @@ const HomeScreen: React.FC<{
 
           <View style={styles.homeHeaderCenter}>
             <MaterialIcons name="favorite" size={16} color="#af25f4" />
-            <Text style={styles.homeHeaderText}>{affirmations.length}</Text>
+            <Text style={styles.homeHeaderText}>{favoritesCount}</Text>
           </View>
 
           <TouchableOpacity style={styles.homeHeaderButton}>
@@ -729,8 +769,8 @@ const HomeScreen: React.FC<{
               {/* Practice button moved or removed for simplicity as requested, keeping center clean */}
             </View>
 
-            <TouchableOpacity style={styles.homeNavButton}>
-              <MaterialIcons name="person-outline" size={28} color="rgba(255, 255, 255, 0.4)" />
+            <TouchableOpacity style={styles.homeNavButton} onPress={() => onNavigate(ScreenName.FAVORITES)}>
+              <MaterialIcons name="favorite-border" size={28} color="rgba(255, 255, 255, 0.4)" />
             </TouchableOpacity>
           </View>
         </View>
@@ -740,6 +780,7 @@ const HomeScreen: React.FC<{
 };
 
 import { CategoriesScreen } from './components/CategoriesScreen';
+import { FavoritesScreen } from './components/FavoritesScreen';
 
 // Main App Component
 const App: React.FC = () => {
@@ -828,6 +869,8 @@ const App: React.FC = () => {
         />;
       case ScreenName.CATEGORIES:
         return <CategoriesScreen onBack={() => setScreen(ScreenName.HOME)} />;
+      case ScreenName.FAVORITES:
+        return <FavoritesScreen onBack={() => setScreen(ScreenName.HOME)} />;
       default:
         return <View><Text>Unknown Screen</Text></View>;
     }
