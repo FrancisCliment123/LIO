@@ -13,6 +13,7 @@ const ITEM_WIDTH = (width - (PADDING * 2) - (GAP * 2)) / 3;
 
 interface CategoriesScreenProps {
     onBack: () => void;
+    onNavigate?: (screen: any) => void;
 }
 
 const CategoryCard: React.FC<{
@@ -58,7 +59,7 @@ const ForYouCard: React.FC<{
 );
 
 
-export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ onBack }) => {
+export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ onBack, onNavigate }) => {
     return (
         <View style={styles.container}>
             <CinematicBackground />
@@ -120,7 +121,10 @@ export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ onBack }) =>
                             </TouchableOpacity>
 
                             {/* My Favorites */}
-                            <TouchableOpacity style={[styles.rightCard, { flex: 1.2 }]}>
+                            <TouchableOpacity
+                                style={[styles.rightCard, { flex: 1.2 }]}
+                                onPress={() => onNavigate && onNavigate('FAVORITES')}
+                            >
                                 <View>
                                     <Text style={styles.rightTitle}>Mis favoritos</Text>
                                     <Text style={styles.rightSubtitle}>8 afirmaciones</Text>

@@ -868,7 +868,7 @@ const App: React.FC = () => {
           userData={formData}
         />;
       case ScreenName.CATEGORIES:
-        return <CategoriesScreen onBack={() => setScreen(ScreenName.HOME)} />;
+        return <CategoriesScreen onBack={() => setScreen(ScreenName.HOME)} onNavigate={(s) => setScreen(s as ScreenName)} />;
       case ScreenName.FAVORITES:
         return <FavoritesScreen key={Date.now()} onBack={() => setScreen(ScreenName.HOME)} />;
       default:
