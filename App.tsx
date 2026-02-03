@@ -735,9 +735,9 @@ const HomeScreen: React.FC<{
       {/* TOP OVERLAY: Header */}
       <SafeAreaView style={styles.homeTopOverlay} pointerEvents="box-none">
         <View style={styles.homeHeader}>
-          <TouchableOpacity style={styles.homeHeaderButton} onPress={onReset}>
-            <MaterialIcons name="person-outline" size={24} color="#E2E8F0" />
-          </TouchableOpacity>
+          <View style={styles.homeHeaderButton}>
+            {/* Espacio vacío */}
+          </View>
 
           <View style={styles.homeHeaderCenter}>
             <MaterialIcons name="favorite" size={16} color="#af25f4" />
@@ -769,8 +769,8 @@ const HomeScreen: React.FC<{
               {/* Practice button moved or removed for simplicity as requested, keeping center clean */}
             </View>
 
-            <TouchableOpacity style={styles.homeNavButton} onPress={() => onNavigate(ScreenName.FAVORITES)}>
-              <MaterialIcons name="favorite-border" size={28} color="rgba(255, 255, 255, 0.4)" />
+            <TouchableOpacity style={styles.homeNavButton}>
+              <MaterialIcons name="person-outline" size={28} color="rgba(255, 255, 255, 0.4)" />
             </TouchableOpacity>
           </View>
         </View>
@@ -870,7 +870,7 @@ const App: React.FC = () => {
       case ScreenName.CATEGORIES:
         return <CategoriesScreen onBack={() => setScreen(ScreenName.HOME)} />;
       case ScreenName.FAVORITES:
-        return <FavoritesScreen onBack={() => setScreen(ScreenName.HOME)} />;
+        return <FavoritesScreen key={Date.now()} onBack={() => setScreen(ScreenName.HOME)} />;
       default:
         return <View><Text>Unknown Screen</Text></View>;
     }

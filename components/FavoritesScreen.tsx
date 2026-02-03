@@ -8,6 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 interface FavoritesScreenProps {
     onBack: () => void;
+    onRefresh?: () => void;
 }
 
 export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ onBack }) => {
@@ -21,6 +22,7 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ onBack }) => {
     const loadFavorites = async () => {
         setLoading(true);
         const favs = await getFavorites();
+        console.log('Loaded favorites:', favs.length);
         setFavorites(favs);
         setLoading(false);
     };
