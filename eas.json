@@ -9,10 +9,7 @@
       "distribution": "internal"
     },
     "preview": {
-      "distribution": "internal",
-      "ios": {
-        "resourceClass": "default"
-      }
+      "distribution": "internal"
     },
     "production": {
       "autoIncrement": true
