@@ -16,6 +16,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
+      "appleTeamId": "L8M5M9DCPC",
       "bundleIdentifier": "com.cisfransorganization.lio",
       "icon": "./assets/icon-real.png",
       "infoPlist": {
@@ -37,7 +38,8 @@
           "color": "#ffffff"
         }
       ],
-      "expo-font"
+      "expo-font",
+      "@bacons/apple-targets"
     ],
     "extra": {
       "eas": {
