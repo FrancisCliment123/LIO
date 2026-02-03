@@ -13,6 +13,8 @@ dist-ssr
 *.local
 .expo/
 .env
+ios/
+android/
 
 # Editor directories and files
 .vscode/*
