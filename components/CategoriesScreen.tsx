@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { CinematicBackground } from './CinematicBackground';
+import { getFavoritesCount } from '../services/favorites';
 
 const { width } = Dimensions.get('window');
 const GAP = 12;
@@ -14,6 +15,7 @@ const ITEM_WIDTH = (width - (PADDING * 2) - (GAP * 2)) / 3;
 interface CategoriesScreenProps {
     onBack: () => void;
     onNavigate?: (screen: any) => void;
+    activeCategory?: 'GENERAL' | 'FAVORITES';
 }
 
 const CategoryCard: React.FC<{
@@ -59,7 +61,18 @@ const ForYouCard: React.FC<{
 );
 
 
-export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ onBack, onNavigate }) => {
+export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ onBack, onNavigate, activeCategory = 'GENERAL' }) => {
+    const [favoritesCount, setFavoritesCount] = useState(0);
+
+    useEffect(() => {
+        loadFavoritesCount();
+    }, []);
+
+    const loadFavoritesCount = async () => {
+        const count = await getFavoritesCount();
+        setFavoritesCount(count);
+    };
+
     return (
         <View style={styles.container}>
             <CinematicBackground />
@@ -99,10 +112,25 @@ export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ onBack, onNa
                     <View style={styles.topGrid}>
 
                         {/* Left: General */}
-                        <TouchableOpacity style={styles.generalCard}>
-                            <View style={styles.checkBadge}>
-                                <MaterialIcons name="check" size={12} color="#FFF" />
-                            </View>
+                        <TouchableOpacity
+                            style={[
+                                styles.generalCard,
+                                activeCategory === 'GENERAL' ? {
+                                    borderWidth: 1,
+                                    borderColor: 'rgba(188, 82, 245, 0.6)',
+                                    shadowColor: '#bc52f5',
+                                    shadowOffset: { width: 0, height: 0 },
+                                    shadowOpacity: 0.4,
+                                    shadowRadius: 10,
+                                } : { borderWidth: 0 }
+                            ]}
+                            onPress={() => onNavigate && onNavigate('HOME')}
+                        >
+                            {activeCategory === 'GENERAL' && (
+                                <View style={styles.checkBadge}>
+                                    <MaterialIcons name="check" size={12} color="#FFF" />
+                                </View>
+                            )}
                             <Text style={styles.generalTitle}>General</Text>
                             <View style={styles.generalIcon}>
                                 <MaterialIcons name="auto-awesome" size={28} color="#bc52f5" />
@@ -122,12 +150,28 @@ export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ onBack, onNa
 
                             {/* My Favorites */}
                             <TouchableOpacity
-                                style={[styles.rightCard, { flex: 1.2 }]}
+                                style={[
+                                    styles.rightCard,
+                                    { flex: 1.2 },
+                                    activeCategory === 'FAVORITES' ? {
+                                        borderWidth: 1,
+                                        borderColor: 'rgba(188, 82, 245, 0.6)',
+                                        shadowColor: '#bc52f5',
+                                        shadowOffset: { width: 0, height: 0 },
+                                        shadowOpacity: 0.4,
+                                        shadowRadius: 10,
+                                    } : { borderWidth: 0 }
+                                ]}
                                 onPress={() => onNavigate && onNavigate('FAVORITES')}
                             >
+                                {activeCategory === 'FAVORITES' && (
+                                    <View style={[styles.checkBadge, { top: 12, right: 12 }]}>
+                                        <MaterialIcons name="check" size={12} color="#FFF" />
+                                    </View>
+                                )}
                                 <View>
                                     <Text style={styles.rightTitle}>Mis favoritos</Text>
-                                    <Text style={styles.rightSubtitle}>8 afirmaciones</Text>
+                                    <Text style={styles.rightSubtitle}>{favoritesCount} {favoritesCount === 1 ? 'afirmación' : 'afirmaciones'}</Text>
                                 </View>
                                 <MaterialIcons name="favorite" size={20} color="#af25f4" style={styles.rightIcon} />
                             </TouchableOpacity>
@@ -267,14 +311,8 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#2b1834',
         borderRadius: 20,
-        borderWidth: 2,
-        borderColor: '#af25f4',
         padding: 16,
         justifyContent: 'space-between',
-        shadowColor: '#af25f4',
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 5,
     },
     checkBadge: {
         position: 'absolute',

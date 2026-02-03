@@ -5,14 +5,17 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { getFavorites, removeFavorite } from '../services/favorites';
 import { Affirmation } from '../services/gemini';
 import { LinearGradient } from 'expo-linear-gradient';
+import { CinematicBackground } from './CinematicBackground';
 
 interface FavoritesScreenProps {
     onBack: () => void;
+    onNavigate?: (screen: string) => void;
     onRefresh?: () => void;
 }
 
-export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ onBack }) => {
+export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ onBack, onNavigate }) => {
     const [favorites, setFavorites] = useState<Affirmation[]>([]);
+    const [displayFavorites, setDisplayFavorites] = useState<Affirmation[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -22,75 +25,134 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ onBack }) => {
     const loadFavorites = async () => {
         setLoading(true);
         const favs = await getFavorites();
-        console.log('Loaded favorites:', favs.length);
         setFavorites(favs);
+        setDisplayFavorites(favs); // Initialize display list
         setLoading(false);
     };
 
     const handleUnlike = async (id: string) => {
         await removeFavorite(id);
         setFavorites(prev => prev.filter(fav => fav.id !== id));
+        // Remove all instances of this affirmation from the infinite list
+        setDisplayFavorites(prev => prev.filter(fav => fav.id !== id));
     };
 
-    const renderItem = ({ item }: { item: Affirmation }) => (
-        <View style={styles.cardContainer}>
-            <LinearGradient
-                colors={['rgba(255, 255, 255, 0.1)', 'rgba(255, 255, 255, 0.05)']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.card}
-            >
-                <View style={styles.cardContent}>
-                    <Text style={styles.affirmationText}>{item.text}</Text>
+    const handleLoadMore = () => {
+        if (favorites.length > 0) {
+            // Append the original list to create the loop effect
+            setDisplayFavorites(prev => [...prev, ...favorites]);
+        }
+    };
+
+    const renderItem = ({ item }: { item: Affirmation }) => {
+        return (
+            <View style={styles.affirmationPage}>
+                <View style={styles.homeMain}>
+                    <Text style={styles.homeAffirmation}>
+                        {item.text}
+                    </Text>
                 </View>
-                <TouchableOpacity
-                    style={styles.unlikeButton}
-                    onPress={() => handleUnlike(item.id)}
-                >
-                    <MaterialIcons name="favorite" size={24} color="#ef4444" />
-                </TouchableOpacity>
-            </LinearGradient>
-        </View>
-    );
+
+                {/* Action Buttons INSIDE the scrollable page */}
+                <View style={styles.cardActions}>
+                    <TouchableOpacity style={styles.cardActionButton}>
+                        <MaterialIcons name="share" size={28} color="rgba(255,255,255,0.8)" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.cardActionButton}
+                        onPress={() => handleUnlike(item.id)}
+                    >
+                        <MaterialIcons
+                            name="favorite"
+                            size={32}
+                            color="#ef4444"
+                        />
+                    </TouchableOpacity>
+                </View>
+            </View>
+        );
+    };
 
     return (
         <View style={styles.container}>
-            <SafeAreaView style={styles.safeArea}>
-                {/* Header */}
-                <View style={styles.header}>
-                    <TouchableOpacity onPress={onBack} style={styles.backButton}>
-                        <MaterialIcons name="arrow-back" size={24} color="#E2E8F0" />
-                    </TouchableOpacity>
-                    <Text style={styles.title}>Mis Favoritos</Text>
-                    <View style={styles.headerRight}>
-                        <MaterialIcons name="favorite" size={20} color="#ef4444" />
-                        <Text style={styles.count}>{favorites.length}</Text>
-                    </View>
-                </View>
+            <CinematicBackground />
 
-                {/* Content */}
+            {/* Content wrapper - sits above background */}
+            <View style={styles.contentWrapper}>
+                {/* Main Swipeable Content */}
                 {loading ? (
-                    <View style={styles.emptyContainer}>
+                    <View style={[styles.affirmationPage, { justifyContent: 'center', alignItems: 'center' }]}>
                         <Text style={styles.emptyText}>Cargando...</Text>
                     </View>
                 ) : favorites.length === 0 ? (
-                    <View style={styles.emptyContainer}>
+                    <SafeAreaView style={styles.emptyContainer}>
+                        <TouchableOpacity onPress={onBack} style={styles.backButtonAbsolute}>
+                            <MaterialIcons name="arrow-back" size={24} color="#E2E8F0" />
+                        </TouchableOpacity>
                         <MaterialIcons name="favorite-border" size={80} color="rgba(255, 255, 255, 0.2)" />
                         <Text style={styles.emptyTitle}>Sin favoritos aún</Text>
                         <Text style={styles.emptySubtitle}>
                             Toca el corazón en las afirmaciones que te gusten para guardarlas aquí
                         </Text>
-                    </View>
+                    </SafeAreaView>
                 ) : (
-                    <FlatList
-                        data={favorites}
-                        renderItem={renderItem}
-                        keyExtractor={item => item.id}
-                        contentContainerStyle={styles.list}
-                        showsVerticalScrollIndicator={false}
-                    />
+                    <>
+                        <FlatList
+                            data={displayFavorites}
+                            renderItem={renderItem}
+                            keyExtractor={(item, index) => `${item.id}-${index}`}
+                            pagingEnabled
+                            showsVerticalScrollIndicator={false}
+                            snapToAlignment="start"
+                            decelerationRate="fast"
+                            snapToInterval={Dimensions.get('window').height}
+                            onEndReached={handleLoadMore}
+                            onEndReachedThreshold={0.5}
+                            style={styles.flatList}
+                        />
+
+                        {/* TOP OVERLAY: Header with heart count and premium */}
+                        <SafeAreaView style={styles.topOverlay} pointerEvents="box-none">
+                            <View style={styles.header}>
+                                {/* Empty Left View for balance */}
+                                <View style={{ width: 40 }} />
+
+                                <View style={styles.headerLeft}>
+                                    <MaterialIcons name="favorite" size={16} color="#af25f4" />
+                                    <Text style={styles.headerText}>{favorites.length}</Text>
+                                </View>
+
+                                <TouchableOpacity style={styles.headerButton}>
+                                    <MaterialIcons name="workspace-premium" size={24} color="#af25f4" />
+                                </TouchableOpacity>
+                            </View>
+                        </SafeAreaView>
+
+                        {/* BOTTOM OVERLAY: Navigation in corners */}
+                        <SafeAreaView style={styles.bottomOverlay} pointerEvents="box-none">
+                            <View style={styles.actionsContainer} pointerEvents="box-none">
+                                {/* Swipe Hint */}
+                                <View style={styles.swipeHint}>
+                                    <MaterialIcons name="keyboard-arrow-up" size={24} color="rgba(255,255,255,0.3)" />
+                                </View>
+
+                                {/* Bottom Nav Bar - Icons in corners */}
+                                <View style={styles.nav}>
+                                    <TouchableOpacity style={styles.navButton} onPress={() => onNavigate && onNavigate('CATEGORIES')}>
+                                        <MaterialIcons name="grid-view" size={28} color="rgba(255, 255, 255, 0.4)" />
+                                    </TouchableOpacity>
+
+                                    <View style={styles.navCenter} />
+
+                                    <TouchableOpacity style={styles.navButton}>
+                                        <MaterialIcons name="person-outline" size={28} color="rgba(255, 255, 255, 0.4)" />
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        </SafeAreaView>
+                    </>
                 )}
-            </SafeAreaView>
+            </View>
         </View>
     );
 };
@@ -100,64 +162,127 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#070A1A',
     },
-    safeArea: {
+    contentWrapper: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+    },
+    flatList: {
         flex: 1,
+        zIndex: 10,
+    },
+    affirmationPage: {
+        height: Dimensions.get('window').height,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 30,
+        zIndex: 10,
+    },
+    homeMain: {
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+    },
+    homeAffirmation: {
+        fontSize: 28,
+        fontWeight: '700',
+        color: '#FFFFFF',
+        textAlign: 'center',
+        lineHeight: 38,
+        letterSpacing: -0.5,
+        textShadowColor: 'rgba(0, 0, 0, 0.5)',
+        textShadowOffset: { width: 0, height: 2 },
+        textShadowRadius: 10,
+    },
+    cardActions: {
+        flexDirection: 'row',
+        gap: 30,
+        paddingBottom: 100,
+        marginTop: 30, // Reduced from 60 to bring closer to text
+    },
+    cardActionButton: {
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    topOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 100,
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 20,
-        paddingVertical: 16,
-        paddingTop: 60,
+        paddingTop: 20,
+        marginTop: 50,
+        height: 60,
     },
-    backButton: {
-        padding: 8,
-    },
-    title: {
-        fontSize: 20,
-        fontWeight: '700',
-        color: '#FFFFFF',
-        flex: 1,
-        textAlign: 'center',
-    },
-    headerRight: {
+    headerLeft: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
+        backgroundColor: 'rgba(255,255,255,0.08)',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
     },
-    count: {
-        fontSize: 16,
+    headerText: {
+        fontSize: 14,
         fontWeight: '600',
         color: '#FFFFFF',
     },
-    list: {
-        padding: 20,
-        paddingTop: 10,
+    headerButton: {
+        width: 40,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
-    cardContainer: {
+    bottomOverlay: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        zIndex: 100,
+    },
+    actionsContainer: {
+        alignItems: 'center',
+        paddingBottom: 20,
+    },
+    swipeHint: {
         marginBottom: 16,
     },
-    card: {
-        borderRadius: 20,
-        padding: 20,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
+    nav: {
         flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        gap: 16,
+        width: '100%',
+        paddingHorizontal: 40,
     },
-    cardContent: {
+    navButton: {
+        padding: 8,
+    },
+    navCenter: {
         flex: 1,
     },
-    affirmationText: {
-        fontSize: 16,
-        lineHeight: 24,
-        color: '#E9D5FF',
-        fontWeight: '500',
-    },
-    unlikeButton: {
+    backButtonAbsolute: {
+        position: 'absolute',
+        top: 60,
+        left: 20,
         padding: 8,
+        zIndex: 100,
     },
     emptyContainer: {
         flex: 1,
@@ -171,12 +296,14 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
         marginTop: 24,
         marginBottom: 12,
+        textAlign: 'center',
     },
     emptySubtitle: {
         fontSize: 16,
         color: 'rgba(255, 255, 255, 0.6)',
         textAlign: 'center',
         lineHeight: 24,
+        paddingHorizontal: 40,
     },
     emptyText: {
         fontSize: 16,

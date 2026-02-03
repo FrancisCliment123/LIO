@@ -784,7 +784,14 @@ import { FavoritesScreen } from './components/FavoritesScreen';
 
 // Main App Component
 const App: React.FC = () => {
-  const [screen, setScreen] = useState<ScreenName>(ScreenName.WELCOME);
+  const [screen, _setScreen] = useState<ScreenName>(ScreenName.WELCOME);
+  const [prevScreen, setPrevScreen] = useState<ScreenName>(ScreenName.HOME);
+
+  const setScreen = (newScreen: ScreenName) => {
+    setPrevScreen(screen);
+    _setScreen(newScreen);
+  };
+
   const [formData, setFormData] = useState<OnboardingData>(INITIAL_DATA);
 
   const updateData = (data: Partial<OnboardingData>) => {
@@ -868,9 +875,14 @@ const App: React.FC = () => {
           userData={formData}
         />;
       case ScreenName.CATEGORIES:
-        return <CategoriesScreen onBack={() => setScreen(ScreenName.HOME)} onNavigate={(s) => setScreen(s as ScreenName)} />;
+        const activeCategory = prevScreen === ScreenName.FAVORITES ? 'FAVORITES' : 'GENERAL';
+        return <CategoriesScreen
+          onBack={() => setScreen(ScreenName.HOME)}
+          onNavigate={(s) => setScreen(s as ScreenName)}
+          activeCategory={activeCategory as 'GENERAL' | 'FAVORITES'}
+        />;
       case ScreenName.FAVORITES:
-        return <FavoritesScreen key={Date.now()} onBack={() => setScreen(ScreenName.HOME)} />;
+        return <FavoritesScreen key={Date.now()} onBack={() => setScreen(ScreenName.HOME)} onNavigate={(s) => setScreen(s as ScreenName)} />;
       default:
         return <View><Text>Unknown Screen</Text></View>;
     }
