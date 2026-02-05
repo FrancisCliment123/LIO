@@ -19,18 +19,33 @@ export interface Affirmation {
 /**
  * Generates a batch of affirmations to optimize API usage and prevent rate limits.
  */
-export const generateAffirmationsBatch = async (userData: OnboardingData, count: number = 5): Promise<Affirmation[]> => {
+export const generateAffirmationsBatch = async (
+    userData: OnboardingData,
+    count: number = 5,
+    category?: string
+): Promise<Affirmation[]> => {
     try {
         if (!API_KEY) {
             throw new Error("API Key missing");
         }
 
-        const themes = [
+        let themes = [
             "gratitud", "fuerza interior", "esperanza", "calma", "éxito",
             "amor propio", "confianza", "presente", "superación", "paz mental",
             "propósito", "valentía", "claridad", "autocuidado", "resiliencia",
             "creatividad", "equilibrio", "libertad", "sabiduría", "autenticidad"
         ];
+
+        let additionalInstruction = "";
+
+        if (category === 'MINDFULNESS') {
+            themes = ["mindfulness", "atención plena", "respiración consciente", "calma interior", "vivir el presente", "paz mental", "conexión cuerpo-mente", "observación sin juicio"];
+            additionalInstruction = "IMPORTANTE: Genera afirmaciones EXCLUSIVAMENTE sobre Mindfulness (Atención Plena). Deben invitar a respirar, pausar, observar y estar en el aquí y ahora. Usa un tono calmado, lento y profundo. Nada de éxito o productividad.";
+        } else if (category === 'ANXIETY') {
+            themes = ["calma", "seguridad", "esto pasará", "respiración", "fortaleza interior", "paz", "protección", "tranquilidad"];
+            additionalInstruction = "IMPORTANTE: Genera afirmaciones para aliviar la ANSIEDAD. Deben transmitir seguridad, protección y la certeza de que todo estará bien. Usa un tono suave, protector y de calma absoluta. Nada de presión ni expectativas.";
+        }
+
         // Shuffle themes
         const shuffledThemes = themes.sort(() => 0.5 - Math.random()).slice(0, count);
 
@@ -42,6 +57,8 @@ export const generateAffirmationsBatch = async (userData: OnboardingData, count:
       
       Usuario: ${userData.name}, Edad: ${userData.ageRange}.
       Temas sugeridos: ${shuffledThemes.join(", ")}.
+
+      ${additionalInstruction}
 
       ESTILO "PREMIUM" (OBLIGATORIO):
       - Frases CORTAS y PODEROSAS (Máximo 10 palabras).
@@ -57,7 +74,7 @@ export const generateAffirmationsBatch = async (userData: OnboardingData, count:
       - Cada frase debe tener estructura sintáctica DIFERENTE
       - NO cambies solo 1-2 palabras de la misma frase base
       - Piensa en afirmaciones completamente ÚNICAS en contenido y forma
-
+      
       EJEMPLOS DE ESTILO (Nota la VARIEDAD de estructura):
       - "Mi trabajo es una fuente de satisfacción y orgullo."
       - "Soy fuerte y resiliente en tiempos dificiles."

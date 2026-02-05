@@ -15,7 +15,8 @@ const ITEM_WIDTH = (width - (PADDING * 2) - (GAP * 2)) / 3;
 interface CategoriesScreenProps {
     onBack: () => void;
     onNavigate?: (screen: any) => void;
-    activeCategory?: 'GENERAL' | 'FAVORITES';
+    activeCategory?: 'GENERAL' | 'FAVORITES' | 'MINDFULNESS' | 'ANXIETY';
+    onCategorySelect?: (category: 'GENERAL' | 'FAVORITES' | 'MINDFULNESS' | 'ANXIETY') => void;
 }
 
 const CategoryCard: React.FC<{
@@ -24,15 +25,32 @@ const CategoryCard: React.FC<{
     isLocked?: boolean;
     color?: string; // Icon color
     fullWidthText?: boolean;
-}> = ({ title, icon, isLocked, color = '#af25f4', fullWidthText }) => (
-    <TouchableOpacity style={styles.gridItem}>
+    onPress?: () => void;
+    isActive?: boolean;
+}> = ({ title, icon, isLocked, color = '#af25f4', fullWidthText, onPress, isActive }) => (
+    <TouchableOpacity
+        style={[
+            styles.gridItem,
+            isActive && {
+                borderColor: 'rgba(188, 82, 245, 0.8)',
+                borderWidth: 1.5,
+                backgroundColor: 'rgba(57, 30, 71, 0.8)',
+            }
+        ]}
+        onPress={onPress}
+    >
+        {isActive && (
+            <View style={styles.checkBadge}>
+                <MaterialIcons name="check" size={12} color="#FFF" />
+            </View>
+        )}
         <View style={styles.gridItemContent}>
             {isLocked && (
                 <MaterialIcons name="lock" size={14} color="rgba(175, 37, 244, 0.7)" style={styles.lockIcon} />
             )}
 
             <View style={styles.gridIconContainer}>
-                <MaterialIcons name={icon} size={24} color={color} />
+                <MaterialIcons name={icon} size={24} color={isActive ? '#d8b4fe' : color} />
             </View>
 
             <Text style={[styles.gridTitle, fullWidthText && { width: '100%' }]} numberOfLines={2}>
@@ -46,22 +64,39 @@ const ForYouCard: React.FC<{
     title: string;
     icon: keyof typeof MaterialIcons.glyphMap;
     isLocked?: boolean;
-}> = ({ title, icon, isLocked }) => (
-    <TouchableOpacity style={styles.gridItem}>
+    onPress?: () => void;
+    isActive?: boolean;
+}> = ({ title, icon, isLocked, onPress, isActive }) => (
+    <TouchableOpacity
+        style={[
+            styles.gridItem,
+            isActive && {
+                borderColor: 'rgba(188, 82, 245, 0.8)',
+                borderWidth: 1.5,
+                backgroundColor: 'rgba(57, 30, 71, 0.8)',
+            }
+        ]}
+        onPress={onPress}
+    >
+        {isActive && (
+            <View style={styles.checkBadge}>
+                <MaterialIcons name="check" size={12} color="#FFF" />
+            </View>
+        )}
         <View style={[styles.gridItemContent, { alignItems: 'flex-start', justifyContent: 'space-between' }]}>
             <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'space-between' }}>
                 <Text style={[styles.gridTitle, { textAlign: 'left', marginTop: 0 }]}>{title}</Text>
                 {isLocked && <MaterialIcons name="lock" size={16} color="rgba(175, 37, 244, 0.7)" />}
             </View>
             <View style={{ alignSelf: 'flex-end' }}>
-                <MaterialIcons name={icon} size={22} color="#af25f4" />
+                <MaterialIcons name={icon} size={22} color={isActive ? '#d8b4fe' : "#af25f4"} />
             </View>
         </View>
     </TouchableOpacity>
 );
 
 
-export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ onBack, onNavigate, activeCategory = 'GENERAL' }) => {
+export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ onBack, onNavigate, activeCategory = 'GENERAL', onCategorySelect }) => {
     const [favoritesCount, setFavoritesCount] = useState(0);
 
     useEffect(() => {
@@ -76,7 +111,6 @@ export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ onBack, onNa
     return (
         <View style={styles.container}>
             <CinematicBackground />
-
             <SafeAreaView style={styles.safeArea}>
                 <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
@@ -92,7 +126,6 @@ export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ onBack, onNa
                     {/* Central Star Icon */}
                     <View style={styles.starContainer}>
                         <View style={styles.starGlow} />
-                        {/* Simple CSS shape representation or Icon for the star */}
                         <MaterialCommunityIcons name="star-four-points" size={60} color="#af25f4" style={styles.starIcon} />
                     </View>
 
@@ -124,7 +157,7 @@ export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ onBack, onNa
                                     shadowRadius: 10,
                                 } : { borderWidth: 0 }
                             ]}
-                            onPress={() => onNavigate && onNavigate('HOME')}
+                            onPress={() => onCategorySelect && onCategorySelect('GENERAL')}
                         >
                             {activeCategory === 'GENERAL' && (
                                 <View style={styles.checkBadge}>
@@ -162,7 +195,7 @@ export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ onBack, onNa
                                         shadowRadius: 10,
                                     } : { borderWidth: 0 }
                                 ]}
-                                onPress={() => onNavigate && onNavigate('FAVORITES')}
+                                onPress={() => onCategorySelect && onCategorySelect('FAVORITES')}
                             >
                                 {activeCategory === 'FAVORITES' && (
                                     <View style={[styles.checkBadge, { top: 12, right: 12 }]}>
@@ -182,9 +215,19 @@ export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ onBack, onNa
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Para ti</Text>
                         <View style={styles.grid}>
-                            <ForYouCard title="Ansiedad" icon="notifications-none" />
+                            <ForYouCard
+                                title="Ansiedad"
+                                icon="notifications-none"
+                                onPress={() => onCategorySelect && onCategorySelect('ANXIETY')}
+                                isActive={activeCategory === 'ANXIETY'}
+                            />
                             <ForYouCard title="Alivio del estrés" icon="sentiment-satisfied" isLocked />
-                            <ForYouCard title="Mindfulness" icon="spa" />
+                            <ForYouCard
+                                title="Mindfulness"
+                                icon="spa"
+                                onPress={() => onCategorySelect && onCategorySelect('MINDFULNESS')}
+                                isActive={activeCategory === 'MINDFULNESS'}
+                            />
                         </View>
                     </View>
 

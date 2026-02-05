@@ -6,6 +6,8 @@ import { getFavorites, removeFavorite } from '../services/favorites';
 import { Affirmation } from '../services/gemini';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CinematicBackground } from './CinematicBackground';
+import { CosmicLoader } from './CosmicLoader';
+import { PulsingHeart } from './PulsingHeart';
 
 interface FavoritesScreenProps {
     onBack: () => void;
@@ -76,20 +78,19 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ onBack, onNavi
     return (
         <View style={styles.container}>
             <CinematicBackground />
-
             {/* Content wrapper - sits above background */}
             <View style={styles.contentWrapper}>
                 {/* Main Swipeable Content */}
                 {loading ? (
                     <View style={[styles.affirmationPage, { justifyContent: 'center', alignItems: 'center' }]}>
-                        <Text style={styles.emptyText}>Cargando...</Text>
+                        <CosmicLoader />
                     </View>
                 ) : favorites.length === 0 ? (
                     <SafeAreaView style={styles.emptyContainer}>
                         <TouchableOpacity onPress={onBack} style={styles.backButtonAbsolute}>
                             <MaterialIcons name="arrow-back" size={24} color="#E2E8F0" />
                         </TouchableOpacity>
-                        <MaterialIcons name="favorite-border" size={80} color="rgba(255, 255, 255, 0.2)" />
+                        <PulsingHeart />
                         <Text style={styles.emptyTitle}>Sin favoritos aún</Text>
                         <Text style={styles.emptySubtitle}>
                             Toca el corazón en las afirmaciones que te gusten para guardarlas aquí
@@ -153,7 +154,7 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ onBack, onNavi
                     </>
                 )}
             </View>
-        </View>
+        </View >
     );
 };
 
@@ -289,6 +290,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         paddingHorizontal: 40,
+        zIndex: 100, // Ensure it sits above background
     },
     emptyTitle: {
         fontSize: 24,

@@ -11,6 +11,7 @@ export enum ScreenName {
   HOME = 'HOME',
   CATEGORIES = 'CATEGORIES',
   FAVORITES = 'FAVORITES',
+  PROFILE = 'PROFILE',
 }
 
 export interface OnboardingData {

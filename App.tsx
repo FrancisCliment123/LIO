@@ -14,6 +14,14 @@ import { FlatList, ActivityIndicator } from 'react-native';
 import LottieView from 'lottie-react-native';
 import { registerForPushNotificationsAsync, scheduleTestNotification, updateWidget } from './services/notifications';
 import { getFavorites, addFavorite, removeFavorite, getFavoritesCount } from './services/favorites';
+import { CosmicLoader } from './components/CosmicLoader';
+import {
+  useFonts,
+  PlaywriteNZBasic_100Thin,
+  PlaywriteNZBasic_200ExtraLight,
+  PlaywriteNZBasic_300Light,
+  PlaywriteNZBasic_400Regular,
+} from '@expo-google-fonts/playwrite-nz-basic';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -605,8 +613,9 @@ const WidgetScreen: React.FC<{ onNext: () => void; onBack: () => void }> = ({ on
 const HomeScreen: React.FC<{
   onReset: () => void;
   onNavigate: (screen: ScreenName) => void;
-  userData: OnboardingData
-}> = ({ onReset, onNavigate, userData }) => {
+  userData: OnboardingData;
+  activeCategory?: string;
+}> = ({ onReset, onNavigate, userData, activeCategory }) => {
   const [affirmations, setAffirmations] = useState<Affirmation[]>([]);
   const [loading, setLoading] = useState(false);
   const [likedAffirmations, setLikedAffirmations] = useState<Set<string>>(new Set());
@@ -648,7 +657,7 @@ const HomeScreen: React.FC<{
     setLoading(true);
     try {
       // Use the batch function to get multiple affirmations at once
-      const newAffirmations = await generateAffirmationsBatch(userData, 3);
+      const newAffirmations = await generateAffirmationsBatch(userData, 3, activeCategory);
 
       // Update widget with the first affirmation if available
       if (newAffirmations.length > 0) {
@@ -720,14 +729,7 @@ const HomeScreen: React.FC<{
         style={styles.homeFlatList}
         ListEmptyComponent={
           <View style={[styles.affirmationPage, { justifyContent: 'center', alignItems: 'center' }]}>
-            <ActivityIndicator size="large" color="#af25f4" />
-            <Text style={{
-              color: '#E9D5FF',
-              marginTop: 20,
-              fontSize: 16,
-              fontWeight: '500',
-              fontFamily: 'System'
-            }}>Conectando con el universo...</Text>
+            <CosmicLoader />
           </View>
         }
       />
@@ -769,7 +771,7 @@ const HomeScreen: React.FC<{
               {/* Practice button moved or removed for simplicity as requested, keeping center clean */}
             </View>
 
-            <TouchableOpacity style={styles.homeNavButton}>
+            <TouchableOpacity style={styles.homeNavButton} onPress={() => onNavigate(ScreenName.PROFILE)}>
               <MaterialIcons name="person-outline" size={28} color="rgba(255, 255, 255, 0.4)" />
             </TouchableOpacity>
           </View>
@@ -781,11 +783,20 @@ const HomeScreen: React.FC<{
 
 import { CategoriesScreen } from './components/CategoriesScreen';
 import { FavoritesScreen } from './components/FavoritesScreen';
+import { ProfileScreen } from './components/ProfileScreen';
 
 // Main App Component
 const App: React.FC = () => {
+  const [fontsLoaded] = useFonts({
+    PlaywriteNZBasic_100Thin,
+    PlaywriteNZBasic_200ExtraLight,
+    PlaywriteNZBasic_300Light,
+    PlaywriteNZBasic_400Regular,
+  });
+
   const [screen, _setScreen] = useState<ScreenName>(ScreenName.WELCOME);
   const [prevScreen, setPrevScreen] = useState<ScreenName>(ScreenName.HOME);
+  const [activeCategory, setActiveCategory] = useState<'GENERAL' | 'FAVORITES' | 'MINDFULNESS' | 'ANXIETY'>('GENERAL');
 
   const setScreen = (newScreen: ScreenName) => {
     setPrevScreen(screen);
@@ -873,25 +884,49 @@ const App: React.FC = () => {
           onReset={() => setScreen(ScreenName.WELCOME)}
           onNavigate={(s) => setScreen(s)}
           userData={formData}
+          activeCategory={activeCategory}
+          key={activeCategory} // Force re-mount on category change to reload affirmations
         />;
       case ScreenName.CATEGORIES:
-        const activeCategory = prevScreen === ScreenName.FAVORITES ? 'FAVORITES' : 'GENERAL';
         return <CategoriesScreen
-          onBack={() => setScreen(ScreenName.HOME)}
+          onBack={() => setScreen(activeCategory === 'FAVORITES' ? ScreenName.FAVORITES : ScreenName.HOME)}
           onNavigate={(s) => setScreen(s as ScreenName)}
-          activeCategory={activeCategory as 'GENERAL' | 'FAVORITES'}
+          activeCategory={activeCategory}
+          onCategorySelect={(cat) => {
+            setActiveCategory(cat);
+            if (cat === 'FAVORITES') {
+              setScreen(ScreenName.FAVORITES);
+            } else {
+              setScreen(ScreenName.HOME);
+            }
+          }}
         />;
       case ScreenName.FAVORITES:
-        return <FavoritesScreen key={Date.now()} onBack={() => setScreen(ScreenName.HOME)} onNavigate={(s) => setScreen(s as ScreenName)} />;
+        return <FavoritesScreen
+          key={Date.now()}
+          onBack={() => {
+            setActiveCategory('GENERAL');
+            setScreen(ScreenName.HOME);
+          }}
+          onNavigate={(s) => setScreen(s as ScreenName)}
+        />;
+      case ScreenName.PROFILE:
+        return <ProfileScreen
+          onBack={() => setScreen(ScreenName.HOME)}
+          userData={formData}
+        />;
       default:
         return <View><Text>Unknown Screen</Text></View>;
     }
   };
 
+  if (!fontsLoaded) {
+    return <CosmicLoader />;
+  }
+
   return (
     <View style={styles.safeArea}>
       <StatusBar style="light" />
-      <CinematicBackground />
       {renderScreen()}
     </View>
   );
@@ -1312,11 +1347,12 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   homeAffirmation: {
+    fontFamily: 'PlaywriteNZBasic_400Regular',
     fontSize: 28, // Reduced for better fit
-    fontWeight: '700',
     color: '#FFFFFF',
+    // fontWeight: '700', // Removed as Playwrite doesn't have 700 loaded, defaulting to Regular
     textAlign: 'center',
-    lineHeight: 38,
+    lineHeight: 42, // Adjusted for handwriting
     letterSpacing: -0.5,
     textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: { width: 0, height: 2 },
