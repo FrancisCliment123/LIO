@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { getFavorites, removeFavorite } from '../services/favorites';
 import { Affirmation } from '../services/gemini';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CinematicBackground } from './CinematicBackground';
 import { CosmicLoader } from './CosmicLoader';
 import { PulsingHeart } from './PulsingHeart';
+import RevenueCatUI from 'react-native-purchases-ui';
 
 interface FavoritesScreenProps {
     onBack: () => void;
@@ -67,7 +68,7 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ onBack, onNavi
                         <MaterialIcons
                             name="favorite"
                             size={32}
-                            color="#ef4444"
+                            color="#af25f4"
                         />
                     </TouchableOpacity>
                 </View>
@@ -118,13 +119,13 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ onBack, onNavi
                                 {/* Empty Left View for balance */}
                                 <View style={{ width: 40 }} />
 
-                                <View style={styles.headerLeft}>
-                                    <MaterialIcons name="favorite" size={16} color="#af25f4" />
-                                    <Text style={styles.headerText}>{favorites.length}</Text>
-                                </View>
 
-                                <TouchableOpacity style={styles.headerButton}>
-                                    <MaterialIcons name="workspace-premium" size={24} color="#af25f4" />
+
+                                <TouchableOpacity
+                                    style={styles.headerButton}
+                                    onPress={() => RevenueCatUI.presentPaywall({})}
+                                >
+                                    <MaterialCommunityIcons name="crown" size={24} color="#ffd700" />
                                 </TouchableOpacity>
                             </View>
                         </SafeAreaView>
@@ -132,10 +133,7 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ onBack, onNavi
                         {/* BOTTOM OVERLAY: Navigation in corners */}
                         <SafeAreaView style={styles.bottomOverlay} pointerEvents="box-none">
                             <View style={styles.actionsContainer} pointerEvents="box-none">
-                                {/* Swipe Hint */}
-                                <View style={styles.swipeHint}>
-                                    <MaterialIcons name="keyboard-arrow-up" size={24} color="rgba(255,255,255,0.3)" />
-                                </View>
+
 
                                 {/* Bottom Nav Bar - Icons in corners */}
                                 <View style={styles.nav}>
@@ -145,7 +143,7 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ onBack, onNavi
 
                                     <View style={styles.navCenter} />
 
-                                    <TouchableOpacity style={styles.navButton}>
+                                    <TouchableOpacity style={styles.navButton} onPress={() => onNavigate && onNavigate('PROFILE')}>
                                         <MaterialIcons name="person-outline" size={28} color="rgba(255, 255, 255, 0.4)" />
                                     </TouchableOpacity>
                                 </View>
@@ -262,9 +260,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingBottom: 20,
     },
-    swipeHint: {
-        marginBottom: 16,
-    },
+
     nav: {
         flexDirection: 'row',
         justifyContent: 'space-between',

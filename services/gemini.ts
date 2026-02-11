@@ -8,7 +8,6 @@ if (!API_KEY) {
 }
 
 const genAI = new GoogleGenerativeAI(API_KEY || "");
-const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
 export interface Affirmation {
     id: string;
@@ -18,136 +17,171 @@ export interface Affirmation {
 
 /**
  * Generates a batch of affirmations to optimize API usage and prevent rate limits.
+ * Supports both single category and multi-category (custom mix) generation.
  */
 export const generateAffirmationsBatch = async (
     userData: OnboardingData,
     count: number = 5,
-    category?: string
+    category?: string,
+    categories?: string[]  // NEW: Multiple categories for custom mix
 ): Promise<Affirmation[]> => {
     try {
         if (!API_KEY) {
             throw new Error("API Key missing");
         }
 
-        let themes = [
-            "gratitud", "fuerza interior", "esperanza", "calma", "éxito",
-            "amor propio", "confianza", "presente", "superación", "paz mental",
-            "propósito", "valentía", "claridad", "autocuidado", "resiliencia",
-            "creatividad", "equilibrio", "libertad", "sabiduría", "autenticidad"
-        ];
+        // Initialize model with JSON constraint
+        const model = genAI.getGenerativeModel({
+            model: "gemini-2.0-flash", // Reverting to 2.0-flash as 1.5 was not found (404)
+            generationConfig: { responseMimeType: "application/json" }
+        });
 
+        // validate user data to avoid "undefined" in prompt
+        const safeName = userData.name || "Usuario";
+        const safeAge = userData.ageRange || "Adulto";
+
+        // Category Theme Mapping
+        const categoryThemes: Record<string, string[]> = {
+            // Core categories
+            'GENERAL': ["gratitud", "fuerza interior", "esperanza", "calma", "éxito", "amor propio", "confianza", "presente"],
+            'MY_PHRASES': ["empoderamiento", "autenticidad", "voz interior", "sabiduría personal"],
+            'FAVORITES': ["bienestar", "paz interior", "felicidad", "plenitud"],
+
+            // Wellbeing
+            'MINDFULNESS': ["mindfulness", "atención plena", "respiración consciente", "calma interior", "vivir el presente", "paz mental"],
+            'ANXIETY': ["calma", "seguridad", "esto pasará", "respiración", "fortaleza interior", "paz", "tranquilidad"],
+            'STRESS': ["alivio", "soltar tensión", "relajación profunda", "calma absoluta"],
+
+            // Energy & Motivation
+            'MOTIVATION': ["éxito", "propósito", "valentía", "determinación", "superación"],
+            'ENERGY': ["energía", "vitalidad", "poder interior", "dinamismo"],
+
+            // Self-care & Rest
+            'SELFCARE': ["autocuidado", "amor propio", "compasión", "ternura", "descanso"],
+            'SLEEP': ["descanso", "sueño profundo", "paz nocturna", "relajación"],
+
+            // Mental clarity
+            'FOCUS': ["concentración", "claridad", "enfoque", "atención"],
+            'OVERTHINKING': ["calma mental", "soltar pensamientos", "paz interior", "presente"],
+            'PEACE': ["paz", "serenidad", "armonía", "tranquilidad"],
+
+            // Personal growth
+            'GRATITUDE': ["gratitud", "apreciación", "reconocimiento", "abundancia"],
+            'CONFIDENCE': ["confianza", "seguridad personal", "autenticidad", "fuerza"],
+            'GROWTH': ["crecimiento", "evolución", "aprendizaje", "transformación"],
+
+            // Relationships & Boundaries
+            'BOUNDARIES': ["límites", "respeto propio", "dignidad", "protección"],
+            'RELATIONSHIPS': ["conexión", "amor", "empatía", "relaciones sanas"],
+            'CHANGE': ["cambio", "adaptación", "flexibilidad", "nueva etapa"],
+
+            // Seasonal & Time-based
+            'WINTER': ["calma invernal", "introspección", "renovación", "paz fría"],
+            'MORNING': ["mañana", "nuevo comienzo", "energía matutina", "despertar"],
+        };
+
+        let themes: string[] = [];
         let additionalInstruction = "";
 
-        if (category === 'MINDFULNESS') {
-            themes = ["mindfulness", "atención plena", "respiración consciente", "calma interior", "vivir el presente", "paz mental", "conexión cuerpo-mente", "observación sin juicio"];
-            additionalInstruction = "IMPORTANTE: Genera afirmaciones EXCLUSIVAMENTE sobre Mindfulness (Atención Plena). Deben invitar a respirar, pausar, observar y estar en el aquí y ahora. Usa un tono calmado, lento y profundo. Nada de éxito o productividad.";
-        } else if (category === 'ANXIETY') {
-            themes = ["calma", "seguridad", "esto pasará", "respiración", "fortaleza interior", "paz", "protección", "tranquilidad"];
-            additionalInstruction = "IMPORTANTE: Genera afirmaciones para aliviar la ANSIEDAD. Deben transmitir seguridad, protección y la certeza de que todo estará bien. Usa un tono suave, protector y de calma absoluta. Nada de presión ni expectativas.";
+        // CUSTOM MIX MODE: Blend multiple category themes
+        if (categories && categories.length > 0) {
+            themes = categories.flatMap(cat => categoryThemes[cat] || []);
+            // Remove duplicates
+            themes = Array.from(new Set(themes));
+
+            additionalInstruction = `IMPORTANTE: Genera afirmaciones que combinen los siguientes temas: ${themes.slice(0, 10).join(", ")}. 
+Cada afirmación debe reflejar al menos 2-3 de estos temas de forma cohesiva y natural. No fuerces las combinaciones; busca conexiones orgánicas entre los conceptos.`;
+        }
+        // SINGLE CATEGORY MODE
+        else if (category) {
+            // First try to get specific themes for this category
+            themes = categoryThemes[category] || [];
+
+            // Add specific instructions for special categories
+            if (category === 'MINDFULNESS') {
+                additionalInstruction = "IMPORTANTE: Genera afirmaciones EXCLUSIVAMENTE sobre Mindfulness (Atención Plena). Deben invitar a respirar, pausar, observar y estar en el aquí y ahora. Usa un tono calmado, lento y profundo. Nada de éxito o productividad.";
+            } else if (category === 'ANXIETY') {
+                additionalInstruction = "IMPORTANTE: Genera afirmaciones para aliviar la ANSIEDAD. Deben transmitir seguridad, protección y la certeza de que todo estará bien. Usa un tono suave, protector y de calma absoluta. Nada de presión ni expectativas.";
+            } else if (themes.length === 0) {
+                // If category not found in map, fallback to General themes
+                themes = [
+                    "gratitud", "fuerza interior", "esperanza", "calma", "éxito",
+                    "amor propio", "confianza", "presente", "superación", "paz mental",
+                    "propósito", "valentía", "claridad", "autocuidado", "resiliencia",
+                    "creatividad", "equilibrio", "libertad", "sabiduría", "autenticidad"
+                ];
+            } else {
+                // For other specific categories (Winter, Energy, etc.), add a generic instruction to focus on the themes
+                additionalInstruction = `IMPORTANTE: Enfócate en los temas: ${themes.join(", ")}.`;
+            }
+        } else {
+            // Default General Fallback (no category provided)
+            themes = [
+                "gratitud", "fuerza interior", "esperanza", "calma", "éxito",
+                "amor propio", "confianza", "presente", "superación", "paz mental",
+                "propósito", "valentía", "claridad", "autocuidado", "resiliencia",
+                "creatividad", "equilibrio", "libertad", "sabiduría", "autenticidad"
+            ];
         }
 
         // Shuffle themes
         const shuffledThemes = themes.sort(() => 0.5 - Math.random()).slice(0, count);
 
-        // STRATEGY: PLAIN TEXT + SEPARATORS (NO JSON)
-        // High-End Copywriting persona for premium feel.
         const prompt = `
-      Eres un experto redactor de contenido "premium" para una app de bienestar y mindfulness de alto nivel.
-      Tu objetivo es generar afirmaciones que vendan, que impacten y que se sientan profundas y elegantes.
+      Eres un experto redactor de contenido "premium" para una app de bienestar.
       
-      Usuario: ${userData.name}, Edad: ${userData.ageRange}.
+      Usuario: ${safeName}, Edad: ${safeAge}.
       Temas sugeridos: ${shuffledThemes.join(", ")}.
 
       ${additionalInstruction}
 
+      Genera ${count} afirmaciones ÚNICAS y PROFUNDAS.
+      
       ESTILO "PREMIUM" (OBLIGATORIO):
       - Frases CORTAS y PODEROSAS (Máximo 10 palabras).
       - Tono: Seguro, calmado, elegante y directo al corazón.
       - Gramática PERFECTA.
       - EVITA lo cursi, lo genérico o lo infantil.
-      - EVITA "Intro" o "Relleno". Solo la frase.
+      - EVITA "Intro" o "Relleno".
 
-      REGLAS DE VARIEDAD (CRÍTICO):
-      - NUNCA repitas las mismas palabras clave entre afirmaciones
-      - PROHIBIDO usar palabras cliché como: "abundancia", "irradia", "fluye", "energía positiva", "universo"
-      - Usa vocabulario DIVERSO, natural y específico
-      - Cada frase debe tener estructura sintáctica DIFERENTE
-      - NO cambies solo 1-2 palabras de la misma frase base
-      - Piensa en afirmaciones completamente ÚNICAS en contenido y forma
-      
-      EJEMPLOS DE ESTILO (Nota la VARIEDAD de estructura):
-      - "Mi trabajo es una fuente de satisfacción y orgullo."
-      - "Soy fuerte y resiliente en tiempos dificiles."
-      - "Soy merecedor de relaciones que me nutren."
-      - "Siempre estaré orgulloso de todo lo que he logrado."
-      - "Está bien tener miedo."
-      - "Mis problemas están llegando a su fin."
-      - "La ansiedad no controla mis acciones."
-      - "Acepto conscientemente todo lo que es bueno."
-
-      INSTRUCCIONES TÉCNICAS:
-      1. Genera ${count} afirmaciones distintas.
-      2. Separa cada frase EXACTAMENTE con "|||".
-      3. NO uses comillas, ni números, ni guiones al inicio.
-      4. NUNCA rompas la línea en mitad de la frase.
-      
-      Salida esperada:
-      Frase 1...|||Frase 2...|||Frase 3...
+      REGLAS CRÍTICAS:
+      1. Responde SOLAMENTE con un ARRAY JSON de strings.
+      2. Ejemplo: ["Soy suficiente.", "Mi paz es innegociable."]
+      3. Si no puedes generar afirmaciones por alguna razón (seguridad, falta de datos), devuelve un array vacío [].
+      4. NUNCA incluyas texto fuera del JSON.
     `;
 
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const text = response.text().trim();
 
-        // 1. Split by separator
-        let rawAffirmations = text.split("|||");
+        console.log("Gemini Raw Response:", text);
 
-        // Fallback: if separator failed, try splitting by newlines
-        if (rawAffirmations.length <= 1 && text.includes("\n")) {
-            rawAffirmations = text.split("\n");
+        let cleanAffirmations: string[] = [];
+
+        try {
+            cleanAffirmations = JSON.parse(text);
+        } catch (e) {
+            console.error("JSON Parse Error:", e);
+            // Fallback: try to find JSON array in text if MD blocks were used
+            const match = text.match(/\[.*\]/s);
+            if (match) {
+                try {
+                    cleanAffirmations = JSON.parse(match[0]);
+                } catch (e2) {
+                    throw new Error("Failed to parse JSON response");
+                }
+            } else {
+                throw new Error("Invalid response format");
+            }
         }
 
-        const cleanAffirmations = rawAffirmations
-            .map(t => {
-                // A. Aggressive cleanup of wrapper characters AND leading punctuation
-                // Remove internal newlines to prevent weird breaking
-                let cleaned = t.replace(/[\n\r]+/g, ' ').trim();
+        if (!Array.isArray(cleanAffirmations) || cleanAffirmations.length === 0) {
+            throw new Error("Empty or invalid affirmation array");
+        }
 
-                // Remove leading quotes, dashes, numbers, COMMAS, dots
-                cleaned = cleaned.replace(/^["'\-\d\.,\s]+/, '');
-
-                // Remove trailing quotes
-                cleaned = cleaned.replace(/["']+$/, '');
-
-                // B. Remove internal quotes weirdness
-                cleaned = cleaned.replace(/["'«»“”]/g, '');
-
-                // C. THE KILLER FIX: Check for trailing garbage
-                const words = cleaned.split(/\s+/);
-                if (words.length > 1) {
-                    const lastWord = words[words.length - 1];
-                    // Regex: single letter, case insensitive. 
-                    if (/^[a-zA-ZáéíóúÁÉÍÓÚñÑ]$/.test(lastWord)) {
-                        words.pop();
-                        cleaned = words.join(" ");
-                    }
-                }
-
-                return cleaned.trim();
-            })
-            .filter(t => t.length > 10) // Filter out too short garbage
-            .map(t => {
-                // D. Ensure valid punctuation
-                if (!/[.!?,]$/.test(t)) {
-                    return t + ".";
-                }
-                return t;
-            });
-
-        // Ensure we strictly respect the requested count if we got more
+        // Ensure we strictly respect the requested count
         const finalAffirmations = cleanAffirmations.slice(0, count);
-
-        if (finalAffirmations.length === 0) throw new Error("No valid affirmations parsing result");
 
         return finalAffirmations.map(t => ({
             id: Date.now().toString() + "-" + Math.random().toString(36).substr(2, 9),
@@ -156,7 +190,7 @@ export const generateAffirmationsBatch = async (
         }));
 
     } catch (error) {
-        console.warn("Error generating batch (Strict Mode), using local fallback:", error);
+        console.warn("Error generating batch (JSON Mode), using fallback:", error);
 
         const fallbacks = [
             "Soy capaz de superar cualquier desafío.",

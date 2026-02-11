@@ -37,32 +37,18 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
   return (
     <View style={styles.container}>
 
+      <CinematicBackground />
+
       {/* Header / Navigation */}
       <SafeAreaView style={styles.header}>
-        <View style={styles.headerContent}>
+        {/* Top Row: Back and Skip Buttons */}
+        <View style={styles.headerTopRow}>
           {/* Left: Back Button */}
           <View style={styles.headerLeft}>
             {onBack && (
               <TouchableOpacity onPress={onBack} style={styles.iconButton}>
                 <MaterialIcons name="arrow-back-ios" size={20} color="#FFF" />
               </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Center: Progress Bar */}
-          <View style={styles.headerCenter}>
-            {currentStep && totalSteps && (
-              <View style={styles.progressBarContainer}>
-                {Array.from({ length: totalSteps }).map((_, index) => (
-                  <View
-                    key={index}
-                    style={[
-                      styles.progressSegment,
-                      index < currentStep && styles.progressSegmentActive
-                    ]}
-                  />
-                ))}
-              </View>
             )}
           </View>
 
@@ -75,6 +61,21 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
             )}
           </View>
         </View>
+
+        {/* Bottom Row: Progress Bar */}
+        {currentStep && totalSteps && (
+          <View style={styles.progressBarContainer}>
+            {Array.from({ length: totalSteps }).map((_, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.progressSegment,
+                  index < currentStep && styles.progressSegmentActive
+                ]}
+              />
+            ))}
+          </View>
+        )}
       </SafeAreaView>
 
       {/* Main Content */}
@@ -124,6 +125,14 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 20,
   },
+  headerTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    height: 44,
+  },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -143,6 +152,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 6,
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingBottom: 8,
   },
   progressSegment: {
     width: 32,
@@ -173,8 +185,8 @@ const styles = StyleSheet.create({
   skipText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '300',
-    opacity: 0.6,
+    fontWeight: '400',
+    opacity: 1,
   },
   mainContent: {
     flex: 1,

@@ -17,7 +17,7 @@
     "ios": {
       "supportsTablet": true,
       "appleTeamId": "L8M5M9DCPC",
-      "bundleIdentifier": "com.cisfransorganization.lio",
+      "bundleIdentifier": "com.cisfran.lio",
       "icon": "./assets/icon-real.png",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
@@ -28,7 +28,7 @@
         "foregroundImage": "./assets/icon-real.png",
         "backgroundColor": "#000000"
       },
-      "package": "com.cisfransorganization.lio"
+      "package": "com.cisfran.lio"
     },
     "plugins": [
       [

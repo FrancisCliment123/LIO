@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Dimensions, Animated, Modal } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Dimensions, Animated, Modal, Image, Platform, InteractionManager } from 'react-native';
+import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -12,9 +12,21 @@ import { CinematicBackground } from './components/CinematicBackground';
 import { generateAffirmationsBatch, Affirmation } from './services/gemini';
 import { FlatList, ActivityIndicator } from 'react-native';
 import LottieView from 'lottie-react-native';
-import { registerForPushNotificationsAsync, scheduleTestNotification, updateWidget } from './services/notifications';
+import {
+  registerForPushNotificationsAsync,
+  scheduleTestNotification,
+  updateWidget,
+  scheduleDailyNotifications,
+  scheduleStreakReminder
+} from './services/notifications';
 import { getFavorites, addFavorite, removeFavorite, getFavoritesCount } from './services/favorites';
+import { markInteraction, getWeeklyStreak } from './services/streak';
+import { StreakOverlay } from './components/StreakOverlay';
+import { SwipeIndicator } from './components/SwipeIndicator';
 import { CosmicLoader } from './components/CosmicLoader';
+import { ShareModal } from './components/ShareModal';
+import * as Sharing from 'expo-sharing';
+import Purchases, { LOG_LEVEL } from 'react-native-purchases';
 import {
   useFonts,
   PlaywriteNZBasic_100Thin,
@@ -22,6 +34,7 @@ import {
   PlaywriteNZBasic_300Light,
   PlaywriteNZBasic_400Regular,
 } from '@expo-google-fonts/playwrite-nz-basic';
+
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -51,11 +64,25 @@ const GlassCard: React.FC<{ children: React.ReactNode; style?: any; onPress?: ()
 const WelcomeScreen: React.FC<{ onNext: () => void }> = ({ onNext }) => {
   return (
     <View style={styles.welcomeContainer}>
-
+      <CinematicBackground />
       <SafeAreaView style={styles.welcomeSafeArea}>
         {/* Logo/Video at the top */}
         <View style={styles.logoContainer}>
-          <GeminiSVG width={260} height={260} />
+          <View style={{
+            shadowColor: '#7C3AED',
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.6,
+            shadowRadius: 40,
+          }}>
+            <Image
+              source={require('./assets/frames/lio-logoalone.png')}
+              style={{
+                width: 220,
+                height: 220,
+                resizeMode: 'contain',
+              }}
+            />
+          </View>
         </View>
 
         {/* Main Content */}
@@ -63,9 +90,14 @@ const WelcomeScreen: React.FC<{ onNext: () => void }> = ({ onNext }) => {
           <Text style={styles.welcomeTitle}>Hola, soy Lio</Text>
           <Text style={styles.welcomeSubtitle}>Estoy aquí para iluminar tu día</Text>
 
-          <Text style={styles.welcomeDescription}>
-            Descubre el poder de las afirmaciones diarias para cultivar una mente positiva y conectar con tu mejor versión.
-          </Text>
+          <View style={{
+            width: '100%',
+            alignItems: 'center'
+          }}>
+            <Text style={styles.welcomeDescription}>
+              Descubre el poder de las afirmaciones diarias para cultivar una mente positiva y conectar con tu mejor versión.
+            </Text>
+          </View>
         </View>
 
         {/* Button */}
@@ -96,14 +128,19 @@ const NameScreen: React.FC<{
   return (
     <OnboardingLayout
       onContinue={onNext}
+      onSkip={onNext}
       onBack={onBack}
       isValid={name.length > 0}
-      showSkip={false}
       currentStep={1}
       totalSteps={8}
     >
       <View style={styles.screenContent}>
-
+        <View style={{ alignItems: 'center', marginBottom: 20 }}>
+          <Image
+            source={require('./assets/frames/lio-logoalone.png')}
+            style={{ width: 80, height: 80, resizeMode: 'contain' }}
+          />
+        </View>
 
 
         <Text style={styles.screenTitle}>¿Cómo quieres que te llamemos?</Text>
@@ -132,8 +169,14 @@ const AgeScreen: React.FC<{
   const ranges = ["13 a 17", "18 a 24", "25 a 34", "35 a 44", "45 a 54", "+55"];
 
   return (
-    <OnboardingLayout onContinue={onNext} onBack={onBack} isValid={!!selected} currentStep={2} totalSteps={8}>
+    <OnboardingLayout onContinue={onNext} onSkip={onNext} onBack={onBack} isValid={!!selected} currentStep={2} totalSteps={8}>
       <View style={styles.screenContent}>
+        <View style={{ alignItems: 'center', marginBottom: 20 }}>
+          <Image
+            source={require('./assets/frames/lio-logoalone.png')}
+            style={{ width: 80, height: 80, resizeMode: 'contain' }}
+          />
+        </View>
 
 
         <Text style={styles.screenTitle}>¿Cuántos años tienes?</Text>
@@ -174,8 +217,14 @@ const InterestsScreen: React.FC<{
   ];
 
   return (
-    <OnboardingLayout onContinue={onNext} onBack={onBack} isValid={selected.length > 0} currentStep={3} totalSteps={8}>
+    <OnboardingLayout onContinue={onNext} onSkip={onNext} onBack={onBack} isValid={selected.length > 0} currentStep={3} totalSteps={8}>
       <View style={styles.screenContent}>
+        <View style={{ alignItems: 'center', marginBottom: 20 }}>
+          <Image
+            source={require('./assets/frames/lio-logoalone.png')}
+            style={{ width: 80, height: 80, resizeMode: 'contain' }}
+          />
+        </View>
 
 
         <Text style={styles.screenTitle}>¿Qué categorías te interesan?</Text>
@@ -233,7 +282,7 @@ const StreakScreen: React.FC<{ onNext: () => void; onBack: () => void }> = ({ on
   }, []);
 
   return (
-    <OnboardingLayout onContinue={onNext} onBack={onBack} showSkip={false} currentStep={4} totalSteps={8}>
+    <OnboardingLayout onContinue={onNext} onSkip={onNext} onBack={onBack} currentStep={4} totalSteps={8}>
       <View style={styles.screenContent}>
         {/* Top Icon */}
         <View style={{ alignItems: 'center', marginBottom: 20 }}>
@@ -310,8 +359,15 @@ const MentalHealthScreen: React.FC<{
   ];
 
   return (
-    <OnboardingLayout onContinue={onNext} onBack={onBack} currentStep={5} totalSteps={8}>
+    <OnboardingLayout onContinue={onNext} onSkip={onNext} onBack={onBack} currentStep={5} totalSteps={8}>
       <View style={styles.screenContent}>
+        <View style={{ alignItems: 'center', marginBottom: 20 }}>
+          <Image
+            source={require('./assets/frames/lio-logoalone.png')}
+            style={{ width: 80, height: 80, resizeMode: 'contain' }}
+          />
+        </View>
+
         <Text style={styles.screenTitle}>¿Qué quieres mejorar?</Text>
         <Text style={styles.screenSubtitle}>Elige al menos una para adaptar el contenido a tus necesidades</Text>
 
@@ -360,6 +416,7 @@ const NotificationScreen: React.FC<{
 
   const hours = Array.from({ length: 24 }, (_, i) => `${i}:00`);
 
+
   const selectTime = (time: string) => {
     if (editingType === 'start') {
       update({ startTime: time });
@@ -371,7 +428,7 @@ const NotificationScreen: React.FC<{
   };
 
   return (
-    <OnboardingLayout onContinue={onNext} onBack={onBack} continueText="Permitir" currentStep={6} totalSteps={8}>
+    <OnboardingLayout onContinue={onNext} onSkip={onNext} onBack={onBack} continueText="Permitir" currentStep={6} totalSteps={8}>
       <View style={styles.screenContent}>
         <Text style={[styles.screenTitle, { marginBottom: 4, fontSize: 26, lineHeight: 32 }]}>Recibe afirmaciones a lo largo del día</Text>
         <Text style={[styles.screenSubtitle, { marginBottom: 0, fontSize: 14 }]}>Leer afirmaciones regularmente te ayudará a alcanzar tus metas</Text>
@@ -518,8 +575,15 @@ const GenderScreen: React.FC<{
   const options = ["Femenino", "Masculino", "Otros", "Prefiero no decirlo"];
 
   return (
-    <OnboardingLayout onContinue={onNext} onBack={onBack} isValid={!!selected} currentStep={7} totalSteps={8}>
+    <OnboardingLayout onContinue={onNext} onSkip={onNext} onBack={onBack} isValid={!!selected} currentStep={7} totalSteps={8}>
       <View style={styles.screenContent}>
+        <View style={{ alignItems: 'center', marginBottom: 20 }}>
+          <Image
+            source={require('./assets/frames/lio-logoalone.png')}
+            style={{ width: 80, height: 80, resizeMode: 'contain' }}
+          />
+        </View>
+
         <Text style={styles.screenTitle}>¿Qué opción te representa mejor?</Text>
         <Text style={styles.screenSubtitle}>Algunas afirmaciones usarán tu género o tus pronombres</Text>
 
@@ -548,13 +612,14 @@ const GenderScreen: React.FC<{
 // Widget Screen
 const WidgetScreen: React.FC<{ onNext: () => void; onBack: () => void }> = ({ onNext, onBack }) => {
   return (
-    <OnboardingLayout onContinue={onNext} onBack={onBack} showSkip={false} currentStep={8} totalSteps={8} continueText="Instalar widget">
+    <OnboardingLayout onContinue={onNext} onSkip={onNext} onBack={onBack} currentStep={8} totalSteps={8} continueText="Instalar widget">
       <View style={styles.screenContent}>
         {/* Icon with Glow Effect */}
         <View style={styles.widgetIconContainer}>
-          <View style={styles.widgetIconBox}>
-            <MaterialIcons name="auto-awesome" size={48} color="#FFFFFF" />
-          </View>
+          <Image
+            source={require('./assets/frames/lio-logoalone.png')}
+            style={{ width: 100, height: 100, resizeMode: 'contain' }}
+          />
         </View>
 
         <Text style={[styles.screenTitle, { marginTop: 40, fontSize: 24, paddingHorizontal: 20 }]}>Añade un widget a tu pantalla de inicio</Text>
@@ -578,7 +643,10 @@ const WidgetScreen: React.FC<{ onNext: () => void; onBack: () => void }> = ({ on
                     end={{ x: 1, y: 1 }}
                     style={styles.widgetCardIcon}
                   >
-                    <MaterialIcons name="auto-awesome" size={20} color="#FFFFFF" />
+                    <Image
+                      source={require('./assets/frames/lio-logoalone.png')}
+                      style={{ width: 24, height: 24, resizeMode: 'contain' }}
+                    />
                   </LinearGradient>
                 </View>
                 <View style={styles.widgetCardText}>
@@ -615,17 +683,49 @@ const HomeScreen: React.FC<{
   onNavigate: (screen: ScreenName) => void;
   userData: OnboardingData;
   activeCategory?: string;
-}> = ({ onReset, onNavigate, userData, activeCategory }) => {
+  customMixCategories?: string[] | null;
+}> = ({ onReset, onNavigate, userData, activeCategory, customMixCategories }) => {
   const [affirmations, setAffirmations] = useState<Affirmation[]>([]);
   const [loading, setLoading] = useState(false);
   const [likedAffirmations, setLikedAffirmations] = useState<Set<string>>(new Set());
   const [favoritesCount, setFavoritesCount] = useState(0);
+  const [showStreakOverlay, setShowStreakOverlay] = useState(false);
+  const [sharingAffirmation, setSharingAffirmation] = useState<Affirmation | null>(null);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [currentStreak, setCurrentStreak] = useState(0);
+  const [weeklyData, setWeeklyData] = useState<any[]>([]);
+  const [hasScrolledToday, setHasScrolledToday] = useState(false);
+  const [showSwipeIndicator, setShowSwipeIndicator] = useState(true);
+  const [showLikeBurst, setShowLikeBurst] = useState(false);
 
   // Initial load
   React.useEffect(() => {
     loadFavorites();
     loadMore();
   }, []);
+
+  const handleScroll = async () => {
+    // Hide swipe indicator on first scroll interaction
+    if (showSwipeIndicator) {
+      setShowSwipeIndicator(false);
+    }
+
+    // Only trigger streak once per session
+    if (hasScrolledToday) return;
+
+    try {
+      const result = await markInteraction();
+      if (result.isNewDay) {
+        const weekly = await getWeeklyStreak();
+        setWeeklyData(weekly);
+        setCurrentStreak(result.currentStreak);
+        setShowStreakOverlay(true);
+        setHasScrolledToday(true);
+      }
+    } catch (error) {
+      console.error('Error marking streak interaction:', error);
+    }
+  };
 
   const loadFavorites = async () => {
     const favorites = await getFavorites();
@@ -649,7 +749,17 @@ const HomeScreen: React.FC<{
       await addFavorite(affirmation);
       setLikedAffirmations(prev => new Set([...prev, affirmation.id]));
       setFavoritesCount(prev => prev + 1);
+
+      // Trigger burst
+      setShowLikeBurst(true);
+      setTimeout(() => setShowLikeBurst(false), 1000);
     }
+  }
+
+
+  const handleShare = (affirmation: Affirmation) => {
+    setSharingAffirmation(affirmation);
+    setShowShareModal(true);
   };
 
   const loadMore = async () => {
@@ -657,7 +767,10 @@ const HomeScreen: React.FC<{
     setLoading(true);
     try {
       // Use the batch function to get multiple affirmations at once
-      const newAffirmations = await generateAffirmationsBatch(userData, 3, activeCategory);
+      // If customMixCategories is set, use it; otherwise use single category
+      const newAffirmations = customMixCategories && customMixCategories.length > 0
+        ? await generateAffirmationsBatch(userData, 3, undefined, customMixCategories)
+        : await generateAffirmationsBatch(userData, 3, activeCategory);
 
       // Update widget with the first affirmation if available
       if (newAffirmations.length > 0) {
@@ -690,8 +803,11 @@ const HomeScreen: React.FC<{
 
         {/* Action Buttons INSIDE the scrollable page */}
         <View style={styles.cardActions}>
-          <TouchableOpacity style={styles.cardActionButton}>
-            <MaterialIcons name="share" size={28} color="rgba(255,255,255,0.8)" />
+          <TouchableOpacity
+            style={styles.cardActionButton}
+            onPress={() => handleShare(item)}
+          >
+            <MaterialIcons name="ios-share" size={28} color="rgba(255,255,255,0.8)" />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.cardActionButton}
@@ -700,8 +816,14 @@ const HomeScreen: React.FC<{
             <MaterialIcons
               name={isLiked ? "favorite" : "favorite-border"}
               size={32}
-              color={isLiked ? "#ef4444" : "rgba(255,255,255,0.8)"}
+              color={isLiked ? "#af25f4" : "rgba(255,255,255,0.8)"}
             />
+            {/* Burst Effect centered on button */}
+            {isLiked && showLikeBurst && (
+              <View style={{ position: 'absolute', top: 28, left: 28 }}>
+                <ParticleBurst trigger={showLikeBurst} particleCount={16} />
+              </View>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -712,6 +834,24 @@ const HomeScreen: React.FC<{
     <View style={styles.homeContainer}>
       <CinematicBackground />
 
+      {/* Share Modal */}
+      <ShareModal
+        visible={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        affirmation={sharingAffirmation ? sharingAffirmation.text : ""}
+        author={undefined}
+      />
+
+      {/* Streak Overlay */}
+      <StreakOverlay
+        visible={showStreakOverlay}
+        streakCount={currentStreak}
+        weeklyData={weeklyData}
+        onClose={() => setShowStreakOverlay(false)}
+      />
+
+      {/* Swipe Indicator for new users */}
+      <SwipeIndicator visible={showSwipeIndicator} />
 
       {/* Main Swipeable Content */}
       <FlatList
@@ -725,6 +865,8 @@ const HomeScreen: React.FC<{
         snapToInterval={Dimensions.get('window').height}
         onEndReached={loadMore}
         onEndReachedThreshold={0.8}
+        onScroll={handleScroll}
+        scrollEventThrottle={400}
         contentContainerStyle={{ flexGrow: 1 }}
         style={styles.homeFlatList}
         ListEmptyComponent={
@@ -741,13 +883,13 @@ const HomeScreen: React.FC<{
             {/* Espacio vacío */}
           </View>
 
-          <View style={styles.homeHeaderCenter}>
-            <MaterialIcons name="favorite" size={16} color="#af25f4" />
-            <Text style={styles.homeHeaderText}>{favoritesCount}</Text>
-          </View>
 
-          <TouchableOpacity style={styles.homeHeaderButton}>
-            <MaterialIcons name="workspace-premium" size={24} color="#af25f4" />
+
+          <TouchableOpacity
+            style={styles.homeHeaderButton}
+            onPress={() => RevenueCatUI.presentPaywall({})}
+          >
+            <MaterialCommunityIcons name="crown" size={24} color="#ffd700" />
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -756,10 +898,7 @@ const HomeScreen: React.FC<{
       <SafeAreaView style={styles.homeBottomOverlay} pointerEvents="box-none">
         <View style={styles.homeActionsContainer} pointerEvents="box-none">
 
-          {/* Swipe Hint - Subtle */}
-          <View style={styles.homeSwipeHint}>
-            <MaterialIcons name="keyboard-arrow-up" size={24} color="rgba(255,255,255,0.3)" />
-          </View>
+
 
           {/* Bottom Nav Bar - Minimalist */}
           <View style={styles.homeNav}>
@@ -782,8 +921,15 @@ const HomeScreen: React.FC<{
 };
 
 import { CategoriesScreen } from './components/CategoriesScreen';
+import { CustomMixScreen } from './components/CustomMixScreen';
 import { FavoritesScreen } from './components/FavoritesScreen';
 import { ProfileScreen } from './components/ProfileScreen';
+import { SubscriptionScreen } from './components/SubscriptionScreen';
+import { ParticleBurst } from './components/ParticleBurst';
+
+import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
+
+// ... (imports remain)
 
 // Main App Component
 const App: React.FC = () => {
@@ -796,9 +942,23 @@ const App: React.FC = () => {
 
   const [screen, _setScreen] = useState<ScreenName>(ScreenName.WELCOME);
   const [prevScreen, setPrevScreen] = useState<ScreenName>(ScreenName.HOME);
-  const [activeCategory, setActiveCategory] = useState<'GENERAL' | 'FAVORITES' | 'MINDFULNESS' | 'ANXIETY'>('GENERAL');
+  const [activeCategory, setActiveCategory] = useState<string>('GENERAL');
+  const [customMixCategories, setCustomMixCategories] = useState<string[] | null>(null);
 
-  const setScreen = (newScreen: ScreenName) => {
+  const setScreen = async (newScreen: ScreenName) => {
+    if (newScreen === ScreenName.SUBSCRIPTION) {
+      try {
+        const paywallResult = await RevenueCatUI.presentPaywall();
+        if (paywallResult === PAYWALL_RESULT.PURCHASED || paywallResult === PAYWALL_RESULT.RESTORED) {
+          // Stay on current screen but maybe force refresh? 
+          // For now just closing paywall is enough as state updates elsewhere
+        }
+      } catch (error) {
+        console.error("Paywall error:", error);
+      }
+      return;
+    }
+
     setPrevScreen(screen);
     _setScreen(newScreen);
   };
@@ -810,8 +970,66 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
-    registerForPushNotificationsAsync();
+    // Initialize services
+    const init = async () => {
+      try {
+        // Initialize RevenueCat with Platform-specific configuration (Expo method)
+        Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
+
+        if (Platform.OS === 'ios') {
+          await Purchases.configure({ apiKey: 'appl_LlDboPGefpZSbZOKkljatyYBjvu' });
+        } else if (Platform.OS === 'android') {
+          // Add Android API key when needed
+          await Purchases.configure({ apiKey: 'appl_LlDboPGefpZSbZOKkljatyYBjvu' });
+        }
+
+        console.log('✅ RevenueCat initialized successfully (Expo)');
+
+        // Register for push notifications
+        await registerForPushNotificationsAsync();
+      } catch (error) {
+        console.error('Failed to initialize services:', error);
+      }
+    };
+
+    init();
   }, []);
+
+  // TEMPORARILY DISABLED: Auto-scheduling was causing UI freeze
+  // TODO: Re-implement with proper debouncing or manual trigger
+  /*
+  useEffect(() => {
+    // Wait for all interactions (navigation animations, etc.) to finish before scheduling
+    const task = InteractionManager.runAfterInteractions(async () => {
+      try {
+        // If notifications are disabled, just cancel all and return
+        if (!formData.notificationsEnabled) {
+          await scheduleDailyNotifications(0, '', '', false);
+          return;
+        }
+
+        // Only schedule if enabled
+        await scheduleDailyNotifications(
+          formData.notificationCount,
+          formData.startTime,
+          formData.endTime,
+          formData.notificationsEnabled
+        );
+        await scheduleStreakReminder(formData.streakReminderEnabled);
+      } catch (error) {
+        console.log('Error scheduling notifications:', error);
+      }
+    });
+
+    return () => task.cancel();
+  }, [
+    formData.notificationCount,
+    formData.startTime,
+    formData.endTime,
+    formData.notificationsEnabled,
+    formData.streakReminderEnabled
+  ]);
+  */
 
   const toggleSelection = (key: keyof OnboardingData, value: string) => {
     setFormData(prev => {
@@ -885,14 +1103,17 @@ const App: React.FC = () => {
           onNavigate={(s) => setScreen(s)}
           userData={formData}
           activeCategory={activeCategory}
-          key={activeCategory} // Force re-mount on category change to reload affirmations
+          customMixCategories={customMixCategories}
+          key={customMixCategories ? `mix-${customMixCategories.join('-')}` : activeCategory} // Force re-mount on category/mix change
         />;
       case ScreenName.CATEGORIES:
         return <CategoriesScreen
           onBack={() => setScreen(activeCategory === 'FAVORITES' ? ScreenName.FAVORITES : ScreenName.HOME)}
           onNavigate={(s) => setScreen(s as ScreenName)}
-          activeCategory={activeCategory}
+          activeCategory={customMixCategories ? undefined : activeCategory}  // Clear selection when custom mix is active
+          customMixCategories={customMixCategories}
           onCategorySelect={(cat) => {
+            setCustomMixCategories(null);  // Clear custom mix when selecting individual category
             setActiveCategory(cat);
             if (cat === 'FAVORITES') {
               setScreen(ScreenName.FAVORITES);
@@ -910,10 +1131,32 @@ const App: React.FC = () => {
           }}
           onNavigate={(s) => setScreen(s as ScreenName)}
         />;
+      case ScreenName.CUSTOM_MIX:
+        return <CustomMixScreen
+          onBack={() => setScreen(ScreenName.CATEGORIES)}
+          onNavigate={(s) => setScreen(s as ScreenName)}
+          onMixCreated={(categories) => {
+            setCustomMixCategories(categories);
+            // Important: Don't set activeCategory when custom mix is created
+            // This ensures no individual category appears selected
+            setScreen(ScreenName.HOME);
+          }}
+          initialSelection={customMixCategories || []}
+        />;
       case ScreenName.PROFILE:
         return <ProfileScreen
           onBack={() => setScreen(ScreenName.HOME)}
           userData={formData}
+          onNavigate={(s) => setScreen(s as ScreenName)}
+          onDataUpdate={updateData}
+        />;
+      case ScreenName.SUBSCRIPTION:
+        return <SubscriptionScreen
+          onBack={() => setScreen(prevScreen)}
+          onPurchaseComplete={() => {
+            // Reload premium status after purchase
+            setScreen(ScreenName.HOME);
+          }}
         />;
       default:
         return <View><Text>Unknown Screen</Text></View>;
@@ -925,10 +1168,12 @@ const App: React.FC = () => {
   }
 
   return (
-    <View style={styles.safeArea}>
-      <StatusBar style="light" />
-      {renderScreen()}
-    </View>
+    <SafeAreaProvider>
+      <View style={styles.safeArea}>
+        <StatusBar style="light" />
+        {renderScreen()}
+      </View>
+    </SafeAreaProvider>
   );
 };
 
@@ -1385,7 +1630,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 20, // Increased to avoid overlap with status bar
-    marginTop: 50, // Match Categories screen level
+    marginTop: 10, // Reduced to stick badges closer to top
     height: 60,
   },
   homeHeaderButton: {
@@ -1423,11 +1668,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingBottom: 20,
   },
-  homeSwipeHint: {
-    alignItems: 'center',
-    marginBottom: 20,
-    opacity: 0.6,
-  },
+
   homeNav: {
     flexDirection: 'row',
     alignItems: 'center',

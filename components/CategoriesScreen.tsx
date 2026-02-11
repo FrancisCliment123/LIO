@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import Purchases, { CustomerInfo } from 'react-native-purchases';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { CinematicBackground } from './CinematicBackground';
 import { getFavoritesCount } from '../services/favorites';
+import { checkPremiumStatus } from '../services/revenuecat';
 
 const { width } = Dimensions.get('window');
 const GAP = 12;
@@ -12,11 +14,31 @@ const PADDING = 20;
 // Calculate item width for 3-column grid: (Total Width - Padding*2 - Gap*2) / 3
 const ITEM_WIDTH = (width - (PADDING * 2) - (GAP * 2)) / 3;
 
+// Define Explore categories data
+const EXPLORE_CATEGORIES = [
+    { id: 'WINTER', title: 'Invierno', icon: 'ac-unit' },
+    { id: 'MORNING', title: 'Vibras mañaneras', icon: 'wb-sunny' },
+    { id: 'ENERGY', title: 'Energía', icon: 'bolt' },
+    { id: 'MOTIVATION', title: 'Motivación', icon: 'rocket-launch', fullWidthText: true },
+    { id: 'SELFCARE', title: 'Autocuidado', icon: 'local-florist', fullWidthText: true },
+    { id: 'SLEEP', title: 'Sueño y descanso', icon: 'bedtime', fullWidthText: true },
+    { id: 'FOCUS', title: 'Enfoque', icon: 'visibility' },
+    { id: 'OVERTHINKING', title: 'Pensar demasiado', icon: 'all-inclusive', fullWidthText: true },
+    { id: 'PEACE', title: 'Paz', icon: 'wb-twilight' },
+    { id: 'GRATITUDE', title: 'Gratitud', icon: 'volunteer-activism', fullWidthText: true },
+    { id: 'CONFIDENCE', title: 'Confianza', icon: 'star' },
+    { id: 'GROWTH', title: 'Crecimiento', icon: 'trending-up' },
+    { id: 'BOUNDARIES', title: 'Límites', icon: 'security', fullWidthText: true },
+    { id: 'RELATIONSHIPS', title: 'Relaciones', icon: 'group', fullWidthText: true },
+    { id: 'CHANGE', title: 'Cambio', icon: 'sync-alt' },
+];
+
 interface CategoriesScreenProps {
     onBack: () => void;
     onNavigate?: (screen: any) => void;
-    activeCategory?: 'GENERAL' | 'FAVORITES' | 'MINDFULNESS' | 'ANXIETY';
-    onCategorySelect?: (category: 'GENERAL' | 'FAVORITES' | 'MINDFULNESS' | 'ANXIETY') => void;
+    activeCategory?: string; // Allow any category ID
+    onCategorySelect?: (category: string) => void;
+    customMixCategories?: string[] | null;
 }
 
 const CategoryCard: React.FC<{
@@ -32,25 +54,32 @@ const CategoryCard: React.FC<{
         style={[
             styles.gridItem,
             isActive && {
-                borderColor: 'rgba(188, 82, 245, 0.8)',
-                borderWidth: 1.5,
-                backgroundColor: 'rgba(57, 30, 71, 0.8)',
+                borderColor: '#d946ef', // Brighter fuchsia/purple
+                borderWidth: 2,         // Thicker border
+                backgroundColor: 'rgba(147, 51, 234, 0.5)', // More visible background tint
+                shadowColor: '#d946ef',
+                shadowOffset: { width: 0, height: 0 },
+                shadowOpacity: 0.8,     // Increased glow
+                shadowRadius: 15,       // Larger glow radius
+                transform: [{ scale: 1.05 }], // Increased pop effect
+                zIndex: 10, // Bring to front
             }
         ]}
         onPress={onPress}
+        activeOpacity={0.7}
     >
         {isActive && (
-            <View style={styles.checkBadge}>
-                <MaterialIcons name="check" size={12} color="#FFF" />
+            <View style={styles.checkBadge} pointerEvents="none">
+                <MaterialIcons name="check" size={14} color="#FFF" />
             </View>
         )}
-        <View style={styles.gridItemContent}>
+        <View style={styles.gridItemContent} pointerEvents="none">
             {isLocked && (
                 <MaterialIcons name="lock" size={14} color="rgba(175, 37, 244, 0.7)" style={styles.lockIcon} />
             )}
 
             <View style={styles.gridIconContainer}>
-                <MaterialIcons name={icon} size={24} color={isActive ? '#d8b4fe' : color} />
+                <MaterialIcons name={icon} size={28} color={isActive ? '#FFF' : color} />
             </View>
 
             <Text style={[styles.gridTitle, fullWidthText && { width: '100%' }]} numberOfLines={2}>
@@ -63,6 +92,7 @@ const CategoryCard: React.FC<{
 const ForYouCard: React.FC<{
     title: string;
     icon: keyof typeof MaterialIcons.glyphMap;
+    // Removed isPremium flag since all are accessible in Custom Mix
     isLocked?: boolean;
     onPress?: () => void;
     isActive?: boolean;
@@ -71,41 +101,65 @@ const ForYouCard: React.FC<{
         style={[
             styles.gridItem,
             isActive && {
-                borderColor: 'rgba(188, 82, 245, 0.8)',
-                borderWidth: 1.5,
-                backgroundColor: 'rgba(57, 30, 71, 0.8)',
+                borderColor: '#d946ef', // Brighter fuchsia/purple
+                borderWidth: 2,         // Thicker border
+                backgroundColor: 'rgba(147, 51, 234, 0.5)', // More visible background tint
+                shadowColor: '#d946ef',
+                shadowOffset: { width: 0, height: 0 },
+                shadowOpacity: 0.8,     // Increased glow
+                shadowRadius: 15,       // Larger glow radius
+                transform: [{ scale: 1.05 }], // Increased pop effect
+                zIndex: 10, // Bring to front
             }
         ]}
         onPress={onPress}
+        activeOpacity={0.7}
     >
         {isActive && (
-            <View style={styles.checkBadge}>
-                <MaterialIcons name="check" size={12} color="#FFF" />
+            <View style={styles.checkBadge} pointerEvents="none">
+                <MaterialIcons name="check" size={14} color="#FFF" />
             </View>
         )}
-        <View style={[styles.gridItemContent, { alignItems: 'flex-start', justifyContent: 'space-between' }]}>
+        <View style={[styles.gridItemContent, { alignItems: 'flex-start', justifyContent: 'space-between' }]} pointerEvents="none">
             <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'space-between' }}>
                 <Text style={[styles.gridTitle, { textAlign: 'left', marginTop: 0 }]}>{title}</Text>
                 {isLocked && <MaterialIcons name="lock" size={16} color="rgba(175, 37, 244, 0.7)" />}
             </View>
             <View style={{ alignSelf: 'flex-end' }}>
-                <MaterialIcons name={icon} size={22} color={isActive ? '#d8b4fe' : "#af25f4"} />
+                <MaterialIcons name={icon} size={28} color={isActive ? '#FFF' : "#af25f4"} />
             </View>
         </View>
     </TouchableOpacity>
 );
 
 
-export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ onBack, onNavigate, activeCategory = 'GENERAL', onCategorySelect }) => {
+export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ onBack, onNavigate, activeCategory = 'GENERAL', onCategorySelect, customMixCategories }) => {
     const [favoritesCount, setFavoritesCount] = useState(0);
+    const [isPremium, setIsPremium] = useState(false);
 
     useEffect(() => {
-        loadFavoritesCount();
+        loadData();
+
+        // Listen for subscription changes (e.g. after paywall purchase)
+        const customerInfoListener = (info: CustomerInfo) => {
+            const entitlement = info.entitlements.active['Lio +'];
+            setIsPremium(!!entitlement);
+        };
+
+        Purchases.addCustomerInfoUpdateListener(customerInfoListener);
     }, []);
 
-    const loadFavoritesCount = async () => {
+    const loadData = async () => {
         const count = await getFavoritesCount();
         setFavoritesCount(count);
+
+        // Check premium status
+        const status = await checkPremiumStatus();
+        setIsPremium(status.isPremium);
+    };
+
+    const handleLockedCategory = () => {
+        onNavigate?.('SUBSCRIPTION');
     };
 
     return (
@@ -120,24 +174,54 @@ export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ onBack, onNa
                             <MaterialIcons name="arrow-back" size={24} color="#FFF" />
                         </TouchableOpacity>
                         <Text style={styles.headerTitle}>Categorías</Text>
-                        <View style={{ width: 24 }} />
+                        <TouchableOpacity onPress={() => onNavigate?.('PROFILE')} style={styles.backButton}>
+                            <MaterialIcons name="person-outline" size={24} color="#FFF" />
+                        </TouchableOpacity>
                     </View>
 
                     {/* Central Star Icon */}
                     <View style={styles.starContainer}>
-                        <View style={styles.starGlow} />
-                        <MaterialCommunityIcons name="star-four-points" size={60} color="#af25f4" style={styles.starIcon} />
+                        <Image
+                            source={require('../assets/frames/lio-logoalone.png')}
+                            style={[styles.starIcon, { width: 100, height: 100, resizeMode: 'contain' }]}
+                        />
                     </View>
 
                     {/* Create Mix Button */}
-                    <TouchableOpacity style={styles.createButton}>
+                    <TouchableOpacity
+                        style={[
+                            styles.createButton,
+                            // Add selection styling when custom mix is active
+                            customMixCategories && customMixCategories.length > 0 && {
+                                borderWidth: 1.5,
+                                borderColor: 'rgba(188, 82, 245, 0.8)',
+                                shadowColor: '#bc52f5',
+                                shadowOffset: { width: 0, height: 0 },
+                                shadowOpacity: 0.5,
+                                shadowRadius: 12,
+                            }
+                        ]}
+                        onPress={() => isPremium ? onNavigate?.('CUSTOM_MIX') : handleLockedCategory()}
+                    >
+                        {/* Checkmark when custom mix is active */}
+                        {customMixCategories && customMixCategories.length > 0 && (
+                            <View style={[styles.checkBadge, { position: 'absolute', top: 12, right: 12, zIndex: 10 }]}>
+                                <MaterialIcons name="check" size={14} color="#FFF" />
+                            </View>
+                        )}
                         <LinearGradient
                             colors={['#af25f4', '#bc52f5']}
                             start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                             style={styles.createButtonGradient}
                         >
                             <MaterialIcons name="add-circle-outline" size={28} color="#FFF" />
-                            <Text style={styles.createButtonText}>Crear mi propio mix</Text>
+                            <Text style={styles.createButtonText}>
+                                {customMixCategories && customMixCategories.length > 0
+                                    ? `Mi mix (${customMixCategories.length})`
+                                    : 'Crear mi propio mix'
+                                }
+                            </Text>
+                            {!isPremium && <MaterialIcons name="lock" size={20} color="rgba(255, 255, 255, 0.8)" style={{ marginLeft: 8 }} />}
                         </LinearGradient>
                     </TouchableOpacity>
 
@@ -148,18 +232,22 @@ export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ onBack, onNa
                         <TouchableOpacity
                             style={[
                                 styles.generalCard,
-                                activeCategory === 'GENERAL' ? {
-                                    borderWidth: 1,
-                                    borderColor: 'rgba(188, 82, 245, 0.6)',
-                                    shadowColor: '#bc52f5',
+                                // Only show as selected if activeCategory is GENERAL AND no custom mix is active
+                                (activeCategory === 'GENERAL' && !customMixCategories) ? {
+                                    borderColor: '#d946ef', // Brighter fuchsia/purple
+                                    borderWidth: 2,         // Thicker border
+                                    backgroundColor: 'rgba(147, 51, 234, 0.5)', // More visible background tint
+                                    shadowColor: '#d946ef',
                                     shadowOffset: { width: 0, height: 0 },
-                                    shadowOpacity: 0.4,
-                                    shadowRadius: 10,
+                                    shadowOpacity: 0.8,     // Increased glow
+                                    shadowRadius: 15,       // Larger glow radius
+                                    transform: [{ scale: 1.05 }], // Increased pop effect
+                                    zIndex: 10, // Bring to front
                                 } : { borderWidth: 0 }
                             ]}
                             onPress={() => onCategorySelect && onCategorySelect('GENERAL')}
                         >
-                            {activeCategory === 'GENERAL' && (
+                            {(activeCategory === 'GENERAL' && !customMixCategories) && (
                                 <View style={styles.checkBadge}>
                                     <MaterialIcons name="check" size={12} color="#FFF" />
                                 </View>
@@ -186,18 +274,22 @@ export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ onBack, onNa
                                 style={[
                                     styles.rightCard,
                                     { flex: 1.2 },
-                                    activeCategory === 'FAVORITES' ? {
-                                        borderWidth: 1,
-                                        borderColor: 'rgba(188, 82, 245, 0.6)',
-                                        shadowColor: '#bc52f5',
+                                    // Only show as selected if activeCategory is FAVORITES AND no custom mix is active
+                                    (activeCategory === 'FAVORITES' && !customMixCategories) ? {
+                                        borderColor: '#d946ef', // Brighter fuchsia/purple
+                                        borderWidth: 2,         // Thicker border
+                                        backgroundColor: 'rgba(147, 51, 234, 0.5)', // More visible background tint
+                                        shadowColor: '#d946ef',
                                         shadowOffset: { width: 0, height: 0 },
-                                        shadowOpacity: 0.4,
-                                        shadowRadius: 10,
+                                        shadowOpacity: 0.8,     // Increased glow
+                                        shadowRadius: 15,       // Larger glow radius
+                                        transform: [{ scale: 1.05 }], // Increased pop effect
+                                        zIndex: 10, // Bring to front
                                     } : { borderWidth: 0 }
                                 ]}
                                 onPress={() => onCategorySelect && onCategorySelect('FAVORITES')}
                             >
-                                {activeCategory === 'FAVORITES' && (
+                                {(activeCategory === 'FAVORITES' && !customMixCategories) && (
                                     <View style={[styles.checkBadge, { top: 12, right: 12 }]}>
                                         <MaterialIcons name="check" size={12} color="#FFF" />
                                     </View>
@@ -219,14 +311,20 @@ export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ onBack, onNa
                                 title="Ansiedad"
                                 icon="notifications-none"
                                 onPress={() => onCategorySelect && onCategorySelect('ANXIETY')}
-                                isActive={activeCategory === 'ANXIETY'}
+                                isActive={activeCategory === 'ANXIETY' && !customMixCategories}
                             />
-                            <ForYouCard title="Alivio del estrés" icon="sentiment-satisfied" isLocked />
+                            <ForYouCard
+                                title="Alivio del estrés"
+                                icon="sentiment-satisfied"
+                                isLocked={!isPremium}
+                                onPress={() => !isPremium ? handleLockedCategory() : onCategorySelect?.('STRESS')}
+                                isActive={activeCategory === 'STRESS' && !customMixCategories}
+                            />
                             <ForYouCard
                                 title="Mindfulness"
                                 icon="spa"
                                 onPress={() => onCategorySelect && onCategorySelect('MINDFULNESS')}
-                                isActive={activeCategory === 'MINDFULNESS'}
+                                isActive={activeCategory === 'MINDFULNESS' && !customMixCategories}
                             />
                         </View>
                     </View>
@@ -235,25 +333,17 @@ export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ onBack, onNa
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Explorar</Text>
                         <View style={styles.grid}>
-                            <CategoryCard title="Invierno" icon="ac-unit" isLocked />
-                            <CategoryCard title="Vibras mañaneras" icon="wb-sunny" isLocked />
-                            <CategoryCard title="Energía" icon="bolt" isLocked />
-
-                            <CategoryCard title="Motivación" icon="rocket-launch" isLocked fullWidthText />
-                            <CategoryCard title="Autocuidado" icon="local-florist" isLocked fullWidthText />
-                            <CategoryCard title="Sueño y descanso" icon="bedtime" isLocked fullWidthText />
-
-                            <CategoryCard title="Enfoque" icon="visibility" isLocked />
-                            <CategoryCard title="Pensar demasiado" icon="all-inclusive" isLocked fullWidthText />
-                            <CategoryCard title="Paz" icon="wb-twilight" isLocked />
-
-                            <CategoryCard title="Gratitud" icon="volunteer-activism" isLocked fullWidthText />
-                            <CategoryCard title="Confianza" icon="star" isLocked />
-                            <CategoryCard title="Crecimiento" icon="trending-up" isLocked />
-
-                            <CategoryCard title="Límites" icon="security" isLocked fullWidthText />
-                            <CategoryCard title="Relaciones" icon="group" isLocked fullWidthText />
-                            <CategoryCard title="Cambio" icon="sync-alt" isLocked />
+                            {EXPLORE_CATEGORIES.map((cat) => (
+                                <CategoryCard
+                                    key={cat.id}
+                                    title={cat.title}
+                                    icon={cat.icon as any}
+                                    isLocked={!isPremium}
+                                    fullWidthText={cat.fullWidthText}
+                                    onPress={() => !isPremium ? handleLockedCategory() : onCategorySelect?.(cat.id)}
+                                    isActive={activeCategory === cat.id && !customMixCategories}
+                                />
+                            ))}
                         </View>
                     </View>
 

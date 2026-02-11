@@ -12,6 +12,8 @@ export enum ScreenName {
   CATEGORIES = 'CATEGORIES',
   FAVORITES = 'FAVORITES',
   PROFILE = 'PROFILE',
+  SUBSCRIPTION = 'SUBSCRIPTION',
+  CUSTOM_MIX = 'CUSTOM_MIX',
 }
 
 export interface OnboardingData {
@@ -23,6 +25,8 @@ export interface OnboardingData {
   startTime: string;
   endTime: string;
   gender: string;
+  notificationsEnabled: boolean;
+  streakReminderEnabled: boolean;
 }
 
 export const INITIAL_DATA: OnboardingData = {
@@ -34,4 +38,6 @@ export const INITIAL_DATA: OnboardingData = {
   startTime: '9:00',
   endTime: '22:00',
   gender: '',
+  notificationsEnabled: true,
+  streakReminderEnabled: true,
 };

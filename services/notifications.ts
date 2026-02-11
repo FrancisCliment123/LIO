@@ -112,6 +112,9 @@ const getRandomAffirmation = (): string => {
 
 // Helper to update the widget
 export const updateWidget = (affirmation: string) => {
+    // TEMPORARY DISABLE: To fix crash on Home load
+    return;
+
     if (Platform.OS === 'ios') {
         try {
             const { ExtensionStorage } = require('@bacons/apple-targets');
@@ -128,6 +131,74 @@ export const updateWidget = (affirmation: string) => {
             console.log('Error updating widget:', e);
         }
     }
+};
+
+// Function to schedule daily notifications based on user settings
+export const scheduleDailyNotifications = async (
+    count: number,
+    startTime: string,
+    endTime: string,
+    enabled: boolean
+) => {
+    // 1. Cancel all existing notifications
+    await Notifications.cancelAllScheduledNotificationsAsync();
+
+    if (!enabled || count <= 0) {
+        console.log('Notifications disabled or count is 0');
+        return;
+    }
+
+    // 2. Parse times (Assume "H:MM" format)
+    const [startH] = startTime.split(':').map(Number);
+    const [endH] = endTime.split(':').map(Number);
+
+    // 3. Simple scheduling: Spread 'count' notifications across the interval
+    // For simplicity, we'll schedule for the next 48 hours to ensure gap-free coverage
+    const totalHours = endH > startH ? endH - startH : (24 - startH) + endH;
+    const interval = totalHours / count;
+
+    const schedulingPromises = [];
+    for (let i = 0; i < count; i++) {
+        const offsetHours = startH + (i * interval);
+        const hour = Math.floor(offsetHours) % 24;
+        const minute = Math.floor((offsetHours % 1) * 60);
+
+        schedulingPromises.push(Notifications.scheduleNotificationAsync({
+            content: {
+                title: "Lio",
+                body: getRandomAffirmation(),
+                sound: true,
+            },
+            trigger: {
+                type: Notifications.SchedulableTriggerInputTypes.DAILY,
+                hour,
+                minute,
+            },
+        }));
+    }
+
+    await Promise.all(schedulingPromises);
+    console.log(`✅ Scheduled ${count} daily notifications between ${startTime} and ${endTime}`);
+};
+
+// Function to schedule a streak reminder
+export const scheduleStreakReminder = async (enabled: boolean) => {
+    // We can use a specific identifier or just rely on cancelAll if we always re-run both
+    // But better to manage it. For now, we'll use cancelAll in the main scheduler.
+    if (!enabled) return;
+
+    await Notifications.scheduleNotificationAsync({
+        content: {
+            title: "Lio",
+            body: "No olvides tu racha de hoy. ¡Mantén el impulso! 🔥",
+            sound: true,
+        },
+        trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DAILY,
+            hour: 21, // 9 PM
+            minute: 0,
+        },
+    });
 };
 
 // Function to trigger a local test notification immediately (good for simulators/testing UI)
