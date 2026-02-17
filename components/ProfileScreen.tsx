@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Image, Modal, TextInput, FlatList, Switch, Linking, Alert, Keyboard, KeyboardAvoidingView, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch, Modal, TextInput, KeyboardAvoidingView, Platform, Keyboard, Linking, Alert, Image, Dimensions, FlatList, InteractionManager } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import Svg, { Path, Defs, LinearGradient as SvgGradient, Stop, Circle } from 'react-native-svg';
@@ -8,6 +8,10 @@ import { OnboardingData } from '../types';
 import { getStreak, getWeeklyStreak } from '../services/streak';
 import RevenueCatUI from 'react-native-purchases-ui';
 import Purchases from 'react-native-purchases';
+import GlassCard from './GlassCard';
+import StreakCalendarModal from './StreakCalendarModal';
+import { scheduleAllNotifications } from '../services/notifications';
+import { saveNotificationSettings } from '../services/notificationSettings';
 
 const { width } = Dimensions.get('window');
 
@@ -37,11 +41,7 @@ const SettingRow: React.FC<{
     </TouchableOpacity>
 );
 
-const GlassCard: React.FC<{ children: React.ReactNode; style?: any }> = ({ children, style }) => (
-    <View style={[styles.glassCard, style]}>
-        {children}
-    </View>
-);
+
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, userData, onNavigate, onDataUpdate }) => {
     const [streakCount, setStreakCount] = useState(0);
@@ -67,6 +67,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, userData, 
     const [editingTimeType, setEditingTimeType] = useState<'start' | 'end' | null>(null);
     const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
     const [supportModalVisible, setSupportModalVisible] = useState(false);
+    const [calendarModalVisible, setCalendarModalVisible] = useState(false);
     const [isPremium, setIsPremium] = useState(false);
     const [retryCount, setRetryCount] = useState(0);
 
@@ -133,7 +134,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, userData, 
         setGenderModalVisible(false);
     };
 
-    const saveAndCloseNotifications = () => {
+    const saveAndCloseNotifications = async () => {
+        // Update parent state immediately
         onDataUpdate?.({
             notificationCount,
             startTime,
@@ -141,7 +143,101 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, userData, 
             notificationsEnabled,
             streakReminderEnabled
         });
+
+        // Close modal immediately to prevent UI freeze
         setNotificationsModalVisible(false);
+
+        // Schedule heavy tasks for after the interaction/animation completes
+        InteractionManager.runAfterInteractions(() => {
+            // Add a small delay to ensure UI is fully responsive
+            setTimeout(async () => {
+                try {
+                    // Persist settings locally
+                    await saveNotificationSettings({
+                        enabled: notificationsEnabled,
+                        count: notificationCount,
+                        startTime,
+                        endTime,
+                        streakReminderEnabled
+                    });
+
+                    // Schedule notifications
+                    await scheduleAllNotifications(
+                        notificationsEnabled,
+                        notificationCount,
+                        startTime,
+                        endTime,
+                        streakReminderEnabled
+                    );
+                } catch (error) {
+                    console.error("Error saving notifications in background:", error);
+                }
+            }, 500);
+        });
+    };
+
+    const toggleNotifications = async () => {
+        const newValue = !notificationsEnabled;
+        setNotificationsEnabled(newValue);
+        onDataUpdate?.({ notificationsEnabled: newValue });
+
+        // Schedule heavy tasks for after the interaction/animation completes
+        InteractionManager.runAfterInteractions(() => {
+            setTimeout(async () => {
+                try {
+                    // Save and schedule immediately
+                    await saveNotificationSettings({
+                        enabled: newValue,
+                        count: notificationCount,
+                        startTime,
+                        endTime,
+                        streakReminderEnabled
+                    });
+
+                    await scheduleAllNotifications(
+                        newValue,
+                        notificationCount,
+                        startTime,
+                        endTime,
+                        streakReminderEnabled
+                    );
+                } catch (error) {
+                    console.error("Error toggling notifications:", error);
+                }
+            }, 500);
+        });
+    };
+
+    const toggleStreakReminder = async () => {
+        const newValue = !streakReminderEnabled;
+        setStreakReminderEnabled(newValue);
+        onDataUpdate?.({ streakReminderEnabled: newValue });
+
+        // Schedule heavy tasks for after the interaction/animation completes
+        InteractionManager.runAfterInteractions(() => {
+            setTimeout(async () => {
+                try {
+                    // Save and schedule immediately
+                    await saveNotificationSettings({
+                        enabled: notificationsEnabled,
+                        count: notificationCount,
+                        startTime,
+                        endTime,
+                        streakReminderEnabled: newValue
+                    });
+
+                    await scheduleAllNotifications(
+                        notificationsEnabled,
+                        notificationCount,
+                        startTime,
+                        endTime,
+                        newValue
+                    );
+                } catch (error) {
+                    console.error("Error toggling streak reminder:", error);
+                }
+            }, 500);
+        });
     };
 
     const adjustNotificationCount = (delta: number) => {
@@ -163,6 +259,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, userData, 
     const genderOptions = ['Femenino', 'Masculino', 'Otros', 'Prefiero no decirlo'];
     const themeOptions = ['Sistema', 'Oscuro', 'Día'];
 
+    const insets = useSafeAreaInsets();
+
     return (
         <View style={styles.container}>
             <LinearGradient
@@ -170,11 +268,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, userData, 
                 style={styles.background}
             />
 
-            <SafeAreaView style={styles.safeArea}>
+            <View style={[styles.safeArea, { paddingTop: insets.top }]}>
                 <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
                     {/* Header */}
-                    <View style={styles.header}>
+                    <View style={[styles.header, { marginTop: 16 }]}>
                         <TouchableOpacity onPress={onBack} style={styles.closeButton}>
                             <MaterialIcons name="close" size={24} color="#FFF" />
                         </TouchableOpacity>
@@ -225,7 +323,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, userData, 
                     </TouchableOpacity>
 
                     {/* Stats Row */}
-                    <View style={styles.statsCard}>
+                    <TouchableOpacity
+                        style={styles.statsCard}
+                        onPress={() => setCalendarModalVisible(true)}
+                        activeOpacity={0.8}
+                    >
                         <View style={styles.statsHeader}>
                             <View>
                                 <Text style={styles.statsBigNumber}>{streakCount}</Text>
@@ -248,7 +350,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, userData, 
                                 })}
                             </View>
                         </View>
-                    </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', paddingTop: 12 }}>
+                            <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, marginRight: 4 }}>Ver calendario completo</Text>
+                            <MaterialIcons name="chevron-right" size={16} color="rgba(255,255,255,0.4)" />
+                        </View>
+                    </TouchableOpacity>
 
                     {/* Perfil Section */}
                     <View style={styles.section}>
@@ -272,6 +378,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, userData, 
                         </View>
                     </View>
 
+                    <StreakCalendarModal
+                        visible={calendarModalVisible}
+                        onClose={() => setCalendarModalVisible(false)}
+                        currentStreak={streakCount}
+                    />
+
                     {/* Apariencia Section */}
                     <View style={styles.section}>
                         <Text style={styles.sectionHeader}>Apariencia</Text>
@@ -289,13 +401,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, userData, 
                     <View style={styles.section}>
                         <Text style={styles.sectionHeader}>Configuración</Text>
                         <View style={styles.listContainer}>
-                            <View style={{ opacity: 0.5 }}>
-                                <SettingRow
-                                    icon="notifications"
-                                    label="Notificaciones (En mantenimiento)"
-                                // Button disabled as requested
-                                />
-                            </View>
+                            <SettingRow
+                                icon="notifications"
+                                label="Notificaciones"
+                                onPress={() => setNotificationsModalVisible(true)}
+                            />
                             <SettingRow
                                 icon="widgets"
                                 label="Widget"
@@ -340,7 +450,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, userData, 
                     <Text style={styles.footerId}>01bc430b44e849c88a2a81658cebec84</Text>
 
                 </ScrollView>
-            </SafeAreaView>
+            </View>
 
             {/* Name Edit Modal */}
             <Modal
@@ -542,8 +652,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, userData, 
                         style={styles.background}
                     />
                     <SafeAreaView style={styles.safeArea}>
-                        <View style={styles.modalHeader}>
-                            <TouchableOpacity onPress={saveAndCloseNotifications} style={styles.backButton}>
+                        <View style={[styles.modalHeader, { marginTop: 50, paddingHorizontal: 20 }]}>
+                            <TouchableOpacity
+                                onPress={saveAndCloseNotifications}
+                                style={styles.backButton}
+                                hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+                            >
                                 <MaterialIcons name="arrow-back" size={24} color="#FFF" />
                             </TouchableOpacity>
                             <Text style={styles.modalTitleCentered}>Notificaciones</Text>
@@ -593,6 +707,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, userData, 
                                     {/* Time Selectors */}
                                     <TouchableOpacity
                                         style={styles.timeRow}
+                                        activeOpacity={0.7}
                                         onPress={() => {
                                             setEditingTimeType('start');
                                             setTimeModalVisible(true);
@@ -607,6 +722,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, userData, 
 
                                     <TouchableOpacity
                                         style={styles.timeRow}
+                                        activeOpacity={0.7}
                                         onPress={() => {
                                             setEditingTimeType('end');
                                             setTimeModalVisible(true);
@@ -643,65 +759,73 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, userData, 
                             </View>
                         </ScrollView>
                     </SafeAreaView>
+
+                    {/* Time Selection Overlay */}
+                    {timeModalVisible && (
+                        <View style={[StyleSheet.absoluteFill, { zIndex: 9999, elevation: 9999, backgroundColor: 'rgba(0,0,0,0.5)' }]}>
+                            <TouchableOpacity
+                                style={styles.modalOverlay}
+                                activeOpacity={1}
+                                onPress={() => setTimeModalVisible(false)}
+                            >
+                                <View style={[styles.modalContent, { zIndex: 10000 }]}>
+                                    <GlassCard style={[styles.timePickerContainer, { maxHeight: 500 }]}>
+                                        <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                                            <Text style={[styles.modalTitleCentered, { marginBottom: 0, flex: 0 }]}>
+                                                {editingTimeType === 'start' ? 'Hora de inicio' : 'Hora de fin'}
+                                            </Text>
+                                            <TouchableOpacity
+                                                onPress={() => setTimeModalVisible(false)}
+                                                hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+                                            >
+                                                <MaterialIcons name="close" size={24} color="rgba(255,255,255,0.5)" />
+                                            </TouchableOpacity>
+                                        </View>
+
+                                        <FlatList
+                                            data={hours}
+                                            keyExtractor={(item) => item}
+                                            style={{ width: '100%', maxHeight: 400 }}
+                                            contentContainerStyle={{ paddingBottom: 20 }}
+                                            initialScrollIndex={parseInt((editingTimeType === 'start' ? startTime : endTime) || '0')}
+                                            getItemLayout={(data, index) => (
+                                                { length: 61, offset: 61 * index, index }
+                                            )}
+                                            renderItem={({ item }) => (
+                                                <TouchableOpacity
+                                                    style={[
+                                                        styles.timeOption,
+                                                        (editingTimeType === 'start' ? startTime === item : endTime === item) && styles.timeOptionActive,
+                                                        { height: 60, justifyContent: 'center' }
+                                                    ]}
+                                                    activeOpacity={0.6}
+                                                    onPress={() => selectTime(item)}
+                                                >
+                                                    <Text style={[
+                                                        styles.timeOptionText,
+                                                        (editingTimeType === 'start' ? startTime === item : endTime === item) && styles.timeOptionTextActive
+                                                    ]}>
+                                                        {item}
+                                                    </Text>
+                                                    {(editingTimeType === 'start' ? startTime === item : endTime === item) && (
+                                                        <MaterialIcons name="check" size={20} color="#A78BFA" />
+                                                    )}
+                                                </TouchableOpacity>
+                                            )}
+                                            showsVerticalScrollIndicator={true}
+                                            onScrollToIndexFailed={(info) => {
+                                                console.log("Scroll to index failed", info);
+                                            }}
+                                        />
+                                    </GlassCard>
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
                 </View>
             </Modal>
 
-            {/* Time Selection Modal - Using Working Onboarding Pattern */}
-            <Modal
-                visible={timeModalVisible}
-                transparent={true}
-                animationType="slide"
-                onRequestClose={() => setTimeModalVisible(false)}
-            >
-                <TouchableOpacity
-                    style={styles.modalOverlay}
-                    activeOpacity={1}
-                    onPress={() => setTimeModalVisible(false)}
-                >
-                    <View style={styles.modalContent}>
-                        <GlassCard style={styles.timePickerContainer}>
-                            <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                                <Text style={[styles.modalTitleCentered, { marginBottom: 0, flex: 0 }]}>
-                                    {editingTimeType === 'start' ? 'Hora de inicio' : 'Hora de fin'}
-                                </Text>
-                                <TouchableOpacity onPress={() => setTimeModalVisible(false)}>
-                                    <MaterialIcons name="close" size={24} color="rgba(255,255,255,0.5)" />
-                                </TouchableOpacity>
-                            </View>
 
-                            <FlatList
-                                data={hours}
-                                keyExtractor={(item) => item}
-                                style={{ width: '100%' }}
-                                initialScrollIndex={parseInt((editingTimeType === 'start' ? startTime : endTime) || '0')}
-                                getItemLayout={(data, index) => (
-                                    { length: 61, offset: 61 * index, index }
-                                )}
-                                renderItem={({ item }) => (
-                                    <TouchableOpacity
-                                        style={[
-                                            styles.timeOption,
-                                            (editingTimeType === 'start' ? startTime === item : endTime === item) && styles.timeOptionActive
-                                        ]}
-                                        onPress={() => selectTime(item)}
-                                    >
-                                        <Text style={[
-                                            styles.timeOptionText,
-                                            (editingTimeType === 'start' ? startTime === item : endTime === item) && styles.timeOptionTextActive
-                                        ]}>
-                                            {item}
-                                        </Text>
-                                        {(editingTimeType === 'start' ? startTime === item : endTime === item) && (
-                                            <MaterialIcons name="check" size={20} color="#A78BFA" />
-                                        )}
-                                    </TouchableOpacity>
-                                )}
-                                showsVerticalScrollIndicator={false}
-                            />
-                        </GlassCard>
-                    </View>
-                </TouchableOpacity>
-            </Modal>
 
             {/* Widget Instructions Modal */}
             <Modal
@@ -984,7 +1108,7 @@ const styles = StyleSheet.create({
     },
     header: {
         paddingHorizontal: 20,
-        paddingTop: 10,
+        // paddingTop handled appropriately by insets
         alignItems: 'flex-start',
     },
     closeButton: {

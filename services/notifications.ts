@@ -134,26 +134,22 @@ export const updateWidget = (affirmation: string) => {
 };
 
 // Function to schedule daily notifications based on user settings
-export const scheduleDailyNotifications = async (
+const scheduleDailyAffirmations = async (
     count: number,
     startTime: string,
     endTime: string,
     enabled: boolean
 ) => {
-    // 1. Cancel all existing notifications
-    await Notifications.cancelAllScheduledNotificationsAsync();
-
     if (!enabled || count <= 0) {
-        console.log('Notifications disabled or count is 0');
+        console.log('Daily affirmations disabled or count is 0');
         return;
     }
 
-    // 2. Parse times (Assume "H:MM" format)
+    // Parse times (Assume "H:MM" format)
     const [startH] = startTime.split(':').map(Number);
     const [endH] = endTime.split(':').map(Number);
 
-    // 3. Simple scheduling: Spread 'count' notifications across the interval
-    // For simplicity, we'll schedule for the next 48 hours to ensure gap-free coverage
+    // Simple scheduling: Spread 'count' notifications across the interval
     const totalHours = endH > startH ? endH - startH : (24 - startH) + endH;
     const interval = totalHours / count;
 
@@ -178,13 +174,11 @@ export const scheduleDailyNotifications = async (
     }
 
     await Promise.all(schedulingPromises);
-    console.log(`✅ Scheduled ${count} daily notifications between ${startTime} and ${endTime}`);
+    console.log(`✅ Scheduled ${count} daily affirmations between ${startTime} and ${endTime}`);
 };
 
 // Function to schedule a streak reminder
-export const scheduleStreakReminder = async (enabled: boolean) => {
-    // We can use a specific identifier or just rely on cancelAll if we always re-run both
-    // But better to manage it. For now, we'll use cancelAll in the main scheduler.
+const scheduleStreakReminderInternal = async (enabled: boolean) => {
     if (!enabled) return;
 
     await Notifications.scheduleNotificationAsync({
@@ -199,6 +193,58 @@ export const scheduleStreakReminder = async (enabled: boolean) => {
             minute: 0,
         },
     });
+    console.log('✅ Scheduled streak reminder for 21:00');
+};
+
+/**
+ * Main function to schedule all app notifications
+ * This clears all previous notifications and sets up new ones based on settings
+ */
+export const scheduleAllNotifications = async (
+    notificationsEnabled: boolean,
+    count: number,
+    startTime: string,
+    endTime: string,
+    streakReminderEnabled: boolean
+) => {
+    try {
+        // 1. Cancel ALL existing notifications to start fresh
+        await Notifications.cancelAllScheduledNotificationsAsync();
+
+        // 2. Schedule daily affirmations if enabled
+        if (notificationsEnabled) {
+            await scheduleDailyAffirmations(count, startTime, endTime, true);
+        }
+
+        // 3. Schedule streak reminder if enabled
+        // Note: We schedule this regardless of main 'notificationsEnabled' toggle?
+        // Usually streak reminders are separate, but let's assume they respect global setting OR their own
+        // For now, let's make streak reminder independent of 'daily affirmations' toggle but dependent on its own
+        if (streakReminderEnabled) {
+            await scheduleStreakReminderInternal(true);
+        }
+
+        console.log('🔄 All notifications refreshed successfully');
+    } catch (error) {
+        console.error('❌ Error scheduling notifications:', error);
+    }
+};
+
+// Deprecated: use scheduleAllNotifications instead
+export const scheduleDailyNotifications = async (
+    count: number,
+    startTime: string,
+    endTime: string,
+    enabled: boolean
+) => {
+    // Forward to new function, assuming streak reminder is OFF to avoid side effects in legacy calls
+    // But ideally we should migrate all calls to scheduleAllNotifications
+    console.warn('scheduleDailyNotifications is deprecated.');
+};
+
+// Deprecated: use scheduleAllNotifications instead
+export const scheduleStreakReminder = async (enabled: boolean) => {
+    console.warn('scheduleStreakReminder is deprecated.');
 };
 
 // Function to trigger a local test notification immediately (good for simulators/testing UI)

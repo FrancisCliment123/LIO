@@ -120,6 +120,18 @@ export const markInteraction = async (): Promise<StreakResult> => {
     };
 };
 
+export interface MonthData {
+    monthName: string;
+    year: number;
+    days: Array<{
+        date: string;
+        dayNumber: number;
+        completed: boolean;
+        isToday: boolean;
+        isPadding: boolean;
+    }>;
+}
+
 /**
  * Get the current week (Mon-Sun) data for display
  * Returns array of objects with date, day name, completion status, and future status
@@ -172,4 +184,93 @@ export const getWeeklyStreak = async (): Promise<Array<{ date: string; day: stri
     }
 
     return result;
+};
+
+/**
+ * Get full streak history grouped by month
+ */
+export const getFullCalendar = async (): Promise<MonthData[]> => {
+    const data = await getStreakData();
+    const historyDates = Object.keys(data.history).sort();
+
+    // Helper to format YYYY-MM-DD in local time
+    const formatDate = (d: Date) => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    const generateMonthData = (baseDate: Date, history: Record<string, boolean>): MonthData => {
+        const year = baseDate.getFullYear();
+        const month = baseDate.getMonth();
+        const firstDayOfMonth = new Date(year, month, 1);
+        const lastDayOfMonth = new Date(year, month + 1, 0);
+
+        const monthNames = [
+            'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+            'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+        ];
+
+        const today = new Date();
+        const todayStr = formatDate(today);
+
+        // Start day of week (0 = Sunday, 1 = Monday...)
+        // We want 0 = Monday, 1 = Tuesday... 6 = Sunday
+        let startDay = firstDayOfMonth.getDay();
+        startDay = startDay === 0 ? 6 : startDay - 1;
+
+        const days = [];
+
+        // Padding for the start of the week
+        for (let i = 0; i < startDay; i++) {
+            days.push({
+                date: '',
+                dayNumber: 0,
+                completed: false,
+                isToday: false,
+                isPadding: true
+            });
+        }
+
+        // Days of the month
+        for (let i = 1; i <= lastDayOfMonth.getDate(); i++) {
+            const currentDay = new Date(year, month, i);
+            const dateStr = formatDate(currentDay);
+            days.push({
+                date: dateStr,
+                dayNumber: i,
+                completed: history[dateStr] || false,
+                isToday: dateStr === todayStr,
+                isPadding: false
+            });
+        }
+
+        return {
+            monthName: monthNames[month],
+            year: year,
+            days: days
+        };
+    };
+
+    const result: MonthData[] = [];
+    const today = new Date();
+
+    // Determine start month
+    let startMonth: Date;
+    if (historyDates.length > 0) {
+        const firstDate = new Date(historyDates[0]);
+        startMonth = new Date(firstDate.getFullYear(), firstDate.getMonth(), 1);
+    } else {
+        startMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    }
+
+    // Generate from start month to today
+    let current = new Date(startMonth);
+    while (current <= today) {
+        result.push(generateMonthData(new Date(current), data.history));
+        current.setMonth(current.getMonth() + 1);
+    }
+
+    return result.reverse(); // Newest month first
 };
