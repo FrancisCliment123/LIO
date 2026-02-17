@@ -136,7 +136,7 @@ const NameScreen: React.FC<{
       onBack={onBack}
       isValid={name.length > 0}
       currentStep={1}
-      totalSteps={8}
+      totalSteps={9}
     >
       <View style={styles.screenContent}>
         <View style={{ alignItems: 'center', marginBottom: 20 }}>
@@ -185,7 +185,7 @@ const AgeScreen: React.FC<{
   };
 
   return (
-    <OnboardingLayout onContinue={onNext} onSkip={onNext} onBack={onBack} isValid={!!selected && selected !== "Menor de 13"} currentStep={2} totalSteps={8}>
+    <OnboardingLayout onContinue={onNext} onSkip={onNext} onBack={onBack} isValid={!!selected && selected !== "Menor de 13"} currentStep={2} totalSteps={9}>
       <View style={styles.screenContent}>
         <View style={{ alignItems: 'center', marginBottom: 20 }}>
           <Image
@@ -241,7 +241,7 @@ const InterestsScreen: React.FC<{
   ];
 
   return (
-    <OnboardingLayout onContinue={onNext} onSkip={onNext} onBack={onBack} isValid={selected.length > 0} currentStep={3} totalSteps={8}>
+    <OnboardingLayout onContinue={onNext} onSkip={onNext} onBack={onBack} isValid={selected.length > 0} currentStep={3} totalSteps={9}>
       <View style={styles.screenContent}>
         <View style={{ alignItems: 'center', marginBottom: 20 }}>
           <Image
@@ -306,7 +306,7 @@ const StreakScreen: React.FC<{ onNext: () => void; onBack: () => void }> = ({ on
   }, []);
 
   return (
-    <OnboardingLayout onContinue={onNext} onSkip={onNext} onBack={onBack} currentStep={4} totalSteps={8}>
+    <OnboardingLayout onContinue={onNext} onSkip={onNext} onBack={onBack} currentStep={4} totalSteps={9}>
       <View style={styles.screenContent}>
         {/* Top Icon */}
         <View style={{ alignItems: 'center', marginBottom: 20 }}>
@@ -636,7 +636,7 @@ const GenderScreen: React.FC<{
 // Widget Screen
 const WidgetScreen: React.FC<{ onNext: () => void; onBack: () => void }> = ({ onNext, onBack }) => {
   return (
-    <OnboardingLayout onContinue={onNext} onSkip={onNext} onBack={onBack} currentStep={8} totalSteps={8} continueText="Instalar widget">
+    <OnboardingLayout onContinue={onNext} onSkip={onNext} onBack={onBack} currentStep={9} totalSteps={9} continueText="Instalar widget">
       <View style={styles.screenContent}>
         {/* Icon with Glow Effect */}
         <View style={styles.widgetIconContainer}>
