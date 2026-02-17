@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import Purchases, { CustomerInfo } from 'react-native-purchases';
+import * as Haptics from 'expo-haptics';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { CinematicBackground } from './CinematicBackground';
 import { getFavoritesCount } from '../services/favorites';
+import { getCustomPhrases } from '../services/customPhrases';
 import { checkPremiumStatus } from '../services/revenuecat';
 
 const { width } = Dimensions.get('window');
@@ -36,36 +38,44 @@ const EXPLORE_CATEGORIES = [
 interface CategoriesScreenProps {
     onBack: () => void;
     onNavigate?: (screen: any) => void;
-    activeCategory?: string; // Allow any category ID
+    activeCategory?: string;
     onCategorySelect?: (category: string) => void;
     customMixCategories?: string[] | null;
+    currentTheme: 'dark' | 'light';
 }
 
 const CategoryCard: React.FC<{
     title: string;
     icon: keyof typeof MaterialIcons.glyphMap;
     isLocked?: boolean;
-    color?: string; // Icon color
+    color?: string;
     fullWidthText?: boolean;
     onPress?: () => void;
     isActive?: boolean;
-}> = ({ title, icon, isLocked, color = '#af25f4', fullWidthText, onPress, isActive }) => (
+    currentTheme: 'dark' | 'light';
+}> = ({ title, icon, isLocked, color = '#af25f4', fullWidthText, onPress, isActive, currentTheme }) => (
     <TouchableOpacity
         style={[
             styles.gridItem,
+            currentTheme === 'light' && styles.gridItemLight,
             isActive && {
-                borderColor: '#d946ef', // Brighter fuchsia/purple
-                borderWidth: 2,         // Thicker border
-                backgroundColor: 'rgba(147, 51, 234, 0.5)', // More visible background tint
+                borderColor: '#d946ef',
+                borderWidth: 2,
+                backgroundColor: currentTheme === 'light' ? 'rgba(217, 70, 239, 0.1)' : 'rgba(147, 51, 234, 0.5)',
                 shadowColor: '#d946ef',
                 shadowOffset: { width: 0, height: 0 },
-                shadowOpacity: 0.8,     // Increased glow
-                shadowRadius: 15,       // Larger glow radius
-                transform: [{ scale: 1.05 }], // Increased pop effect
-                zIndex: 10, // Bring to front
+                shadowOpacity: 0.8,
+                shadowRadius: 15,
+                transform: [{ scale: 1.05 }],
+                zIndex: 10,
             }
         ]}
-        onPress={onPress}
+        onPress={() => {
+            if (onPress) {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onPress();
+            }
+        }}
         activeOpacity={0.7}
     >
         {isActive && (
@@ -75,14 +85,14 @@ const CategoryCard: React.FC<{
         )}
         <View style={styles.gridItemContent} pointerEvents="none">
             {isLocked && (
-                <MaterialIcons name="lock" size={14} color="rgba(175, 37, 244, 0.7)" style={styles.lockIcon} />
+                <MaterialIcons name="lock" size={14} color={currentTheme === 'light' ? "rgba(124, 58, 237, 0.5)" : "rgba(175, 37, 244, 0.7)"} style={styles.lockIcon} />
             )}
 
             <View style={styles.gridIconContainer}>
-                <MaterialIcons name={icon} size={28} color={isActive ? '#FFF' : color} />
+                <MaterialIcons name={icon} size={28} color={isActive ? (currentTheme === 'light' ? '#7C3AED' : '#FFF') : (currentTheme === 'light' ? '#7C3AED' : color)} />
             </View>
 
-            <Text style={[styles.gridTitle, fullWidthText && { width: '100%' }]} numberOfLines={2}>
+            <Text style={[styles.gridTitle, currentTheme === 'light' && styles.textLight, fullWidthText && { width: '100%' }]} numberOfLines={2}>
                 {title}
             </Text>
         </View>
@@ -92,27 +102,33 @@ const CategoryCard: React.FC<{
 const ForYouCard: React.FC<{
     title: string;
     icon: keyof typeof MaterialIcons.glyphMap;
-    // Removed isPremium flag since all are accessible in Custom Mix
     isLocked?: boolean;
     onPress?: () => void;
     isActive?: boolean;
-}> = ({ title, icon, isLocked, onPress, isActive }) => (
+    currentTheme: 'dark' | 'light';
+}> = ({ title, icon, isLocked, onPress, isActive, currentTheme }) => (
     <TouchableOpacity
         style={[
             styles.gridItem,
+            currentTheme === 'light' && styles.gridItemLight,
             isActive && {
-                borderColor: '#d946ef', // Brighter fuchsia/purple
-                borderWidth: 2,         // Thicker border
-                backgroundColor: 'rgba(147, 51, 234, 0.5)', // More visible background tint
+                borderColor: '#d946ef',
+                borderWidth: 2,
+                backgroundColor: currentTheme === 'light' ? 'rgba(217, 70, 239, 0.1)' : 'rgba(147, 51, 234, 0.5)',
                 shadowColor: '#d946ef',
                 shadowOffset: { width: 0, height: 0 },
-                shadowOpacity: 0.8,     // Increased glow
-                shadowRadius: 15,       // Larger glow radius
-                transform: [{ scale: 1.05 }], // Increased pop effect
-                zIndex: 10, // Bring to front
+                shadowOpacity: 0.8,
+                shadowRadius: 15,
+                transform: [{ scale: 1.05 }],
+                zIndex: 10,
             }
         ]}
-        onPress={onPress}
+        onPress={() => {
+            if (onPress) {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onPress();
+            }
+        }}
         activeOpacity={0.7}
     >
         {isActive && (
@@ -122,25 +138,26 @@ const ForYouCard: React.FC<{
         )}
         <View style={[styles.gridItemContent, { alignItems: 'flex-start', justifyContent: 'space-between' }]} pointerEvents="none">
             <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'space-between' }}>
-                <Text style={[styles.gridTitle, { textAlign: 'left', marginTop: 0 }]}>{title}</Text>
-                {isLocked && <MaterialIcons name="lock" size={16} color="rgba(175, 37, 244, 0.7)" />}
+                <Text style={[styles.gridTitle, currentTheme === 'light' && styles.textLight, { textAlign: 'left', marginTop: 0 }]}>{title}</Text>
+                {isLocked && <MaterialIcons name="lock" size={16} color={currentTheme === 'light' ? "rgba(124, 58, 237, 0.5)" : "rgba(175, 37, 244, 0.7)"} />}
             </View>
             <View style={{ alignSelf: 'flex-end' }}>
-                <MaterialIcons name={icon} size={28} color={isActive ? '#FFF' : "#af25f4"} />
+                <MaterialIcons name={icon} size={28} color={isActive ? (currentTheme === 'light' ? '#7C3AED' : '#FFF') : (currentTheme === 'light' ? '#7C3AED' : "#af25f4")} />
             </View>
         </View>
     </TouchableOpacity>
 );
 
 
-export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ onBack, onNavigate, activeCategory = 'GENERAL', onCategorySelect, customMixCategories }) => {
+export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ onBack, onNavigate, activeCategory = 'GENERAL', onCategorySelect, customMixCategories, currentTheme }) => {
     const [favoritesCount, setFavoritesCount] = useState(0);
+    const [customPhrasesCount, setCustomPhrasesCount] = useState(0);
     const [isPremium, setIsPremium] = useState(false);
 
     useEffect(() => {
         loadData();
 
-        // Listen for subscription changes (e.g. after paywall purchase)
+        // Listen for subscription changes
         const customerInfoListener = (info: CustomerInfo) => {
             const entitlement = info.entitlements.active['Lio +'];
             setIsPremium(!!entitlement);
@@ -150,12 +167,14 @@ export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ onBack, onNa
     }, []);
 
     const loadData = async () => {
-        const count = await getFavoritesCount();
-        setFavoritesCount(count);
-
-        // Check premium status
-        const status = await checkPremiumStatus();
-        setIsPremium(status.isPremium);
+        const [favCount, customPhrases, premiumStatus] = await Promise.all([
+            getFavoritesCount(),
+            getCustomPhrases(),
+            checkPremiumStatus()
+        ]);
+        setFavoritesCount(favCount);
+        setCustomPhrasesCount(customPhrases.length);
+        setIsPremium(premiumStatus.isPremium);
     };
 
     const handleLockedCategory = () => {
@@ -163,19 +182,19 @@ export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ onBack, onNa
     };
 
     return (
-        <View style={styles.container}>
-            <CinematicBackground />
+        <View style={[styles.container, currentTheme === 'light' && styles.containerLight]}>
+            <CinematicBackground theme={currentTheme} />
             <SafeAreaView style={styles.safeArea}>
                 <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
                     {/* Header */}
                     <View style={styles.header}>
-                        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-                            <MaterialIcons name="arrow-back" size={24} color="#FFF" />
+                        <TouchableOpacity onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onBack(); }} style={[styles.backButton, currentTheme === 'light' && { backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 20 }]}>
+                            <MaterialIcons name="arrow-back" size={24} color={currentTheme === 'light' ? "#111827" : "#FFF"} />
                         </TouchableOpacity>
-                        <Text style={styles.headerTitle}>Categorías</Text>
-                        <TouchableOpacity onPress={() => onNavigate?.('PROFILE')} style={styles.backButton}>
-                            <MaterialIcons name="person-outline" size={24} color="#FFF" />
+                        <Text style={[styles.headerTitle, currentTheme === 'light' && styles.textLight]}>Categorías</Text>
+                        <TouchableOpacity onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onNavigate?.('PROFILE'); }} style={[styles.backButton, currentTheme === 'light' && { backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 20 }]}>
+                            <MaterialIcons name="person-outline" size={24} color={currentTheme === 'light' ? "#111827" : "#FFF"} />
                         </TouchableOpacity>
                     </View>
 
@@ -191,7 +210,6 @@ export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ onBack, onNa
                     <TouchableOpacity
                         style={[
                             styles.createButton,
-                            // Add selection styling when custom mix is active
                             customMixCategories && customMixCategories.length > 0 && {
                                 borderWidth: 1.5,
                                 borderColor: 'rgba(188, 82, 245, 0.8)',
@@ -201,9 +219,11 @@ export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ onBack, onNa
                                 shadowRadius: 12,
                             }
                         ]}
-                        onPress={() => isPremium ? onNavigate?.('CUSTOM_MIX') : handleLockedCategory()}
+                        onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                            isPremium ? onNavigate?.('CUSTOM_MIX') : handleLockedCategory();
+                        }}
                     >
-                        {/* Checkmark when custom mix is active */}
                         {customMixCategories && customMixCategories.length > 0 && (
                             <View style={[styles.checkBadge, { position: 'absolute', top: 12, right: 12, zIndex: 10 }]}>
                                 <MaterialIcons name="check" size={14} color="#FFF" />
@@ -232,41 +252,53 @@ export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ onBack, onNa
                         <TouchableOpacity
                             style={[
                                 styles.generalCard,
-                                // Only show as selected if activeCategory is GENERAL AND no custom mix is active
+                                currentTheme === 'light' && styles.generalCardLight,
                                 (activeCategory === 'GENERAL' && !customMixCategories) ? {
-                                    borderColor: '#d946ef', // Brighter fuchsia/purple
-                                    borderWidth: 2,         // Thicker border
-                                    backgroundColor: 'rgba(147, 51, 234, 0.5)', // More visible background tint
+                                    borderColor: '#d946ef',
+                                    borderWidth: 2,
+                                    backgroundColor: currentTheme === 'light' ? 'rgba(217, 70, 239, 0.1)' : 'rgba(147, 51, 234, 0.5)',
                                     shadowColor: '#d946ef',
                                     shadowOffset: { width: 0, height: 0 },
-                                    shadowOpacity: 0.8,     // Increased glow
-                                    shadowRadius: 15,       // Larger glow radius
-                                    transform: [{ scale: 1.05 }], // Increased pop effect
-                                    zIndex: 10, // Bring to front
+                                    shadowOpacity: 0.8,
+                                    shadowRadius: 15,
+                                    transform: [{ scale: 1.05 }],
+                                    zIndex: 10,
                                 } : { borderWidth: 0 }
                             ]}
-                            onPress={() => onCategorySelect && onCategorySelect('GENERAL')}
+                            onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                onCategorySelect && onCategorySelect('GENERAL');
+                            }}
                         >
                             {(activeCategory === 'GENERAL' && !customMixCategories) && (
                                 <View style={styles.checkBadge}>
                                     <MaterialIcons name="check" size={12} color="#FFF" />
                                 </View>
                             )}
-                            <Text style={styles.generalTitle}>General</Text>
+                            <Text style={[styles.generalTitle, currentTheme === 'light' && styles.textLight]}>General</Text>
                             <View style={styles.generalIcon}>
-                                <MaterialIcons name="auto-awesome" size={28} color="#bc52f5" />
+                                <MaterialIcons name="auto-awesome" size={28} color={currentTheme === 'light' ? "#7C3AED" : "#bc52f5"} />
                             </View>
                         </TouchableOpacity>
 
                         {/* Right Column */}
                         <View style={styles.rightCol}>
                             {/* My Own Quotes */}
-                            <TouchableOpacity style={[styles.rightCard, { flex: 0.8 }]}>
+                            <TouchableOpacity
+                                style={[
+                                    styles.rightCard,
+                                    { flex: 0.8 },
+                                    currentTheme === 'light' && styles.rightCardLight
+                                ]}
+                                onPress={() => onNavigate?.('MY_PHRASES')}
+                            >
                                 <View>
-                                    <Text style={styles.rightTitle}>Mis frases</Text>
-                                    <Text style={styles.rightSubtitle}>1 afirmación</Text>
+                                    <Text style={[styles.rightTitle, currentTheme === 'light' && styles.textLight]}>Mis frases</Text>
+                                    <Text style={[styles.rightSubtitle, currentTheme === 'light' && styles.subtitleLight]}>
+                                        {customPhrasesCount} {customPhrasesCount === 1 ? 'afirmación' : 'afirmaciones'}
+                                    </Text>
                                 </View>
-                                <MaterialIcons name="edit" size={20} color="#af25f4" style={styles.rightIcon} />
+                                <MaterialIcons name="edit" size={20} color={currentTheme === 'light' ? "#7C3AED" : "#af25f4"} style={styles.rightIcon} />
                             </TouchableOpacity>
 
                             {/* My Favorites */}
@@ -274,20 +306,23 @@ export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ onBack, onNa
                                 style={[
                                     styles.rightCard,
                                     { flex: 1.2 },
-                                    // Only show as selected if activeCategory is FAVORITES AND no custom mix is active
+                                    currentTheme === 'light' && styles.rightCardLight,
                                     (activeCategory === 'FAVORITES' && !customMixCategories) ? {
-                                        borderColor: '#d946ef', // Brighter fuchsia/purple
-                                        borderWidth: 2,         // Thicker border
-                                        backgroundColor: 'rgba(147, 51, 234, 0.5)', // More visible background tint
+                                        borderColor: '#d946ef',
+                                        borderWidth: 2,
+                                        backgroundColor: currentTheme === 'light' ? 'rgba(217, 70, 239, 0.1)' : 'rgba(147, 51, 234, 0.5)',
                                         shadowColor: '#d946ef',
                                         shadowOffset: { width: 0, height: 0 },
-                                        shadowOpacity: 0.8,     // Increased glow
-                                        shadowRadius: 15,       // Larger glow radius
-                                        transform: [{ scale: 1.05 }], // Increased pop effect
-                                        zIndex: 10, // Bring to front
+                                        shadowOpacity: 0.8,
+                                        shadowRadius: 15,
+                                        transform: [{ scale: 1.05 }],
+                                        zIndex: 10,
                                     } : { borderWidth: 0 }
                                 ]}
-                                onPress={() => onCategorySelect && onCategorySelect('FAVORITES')}
+                                onPress={() => {
+                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                    onCategorySelect && onCategorySelect('FAVORITES');
+                                }}
                             >
                                 {(activeCategory === 'FAVORITES' && !customMixCategories) && (
                                     <View style={[styles.checkBadge, { top: 12, right: 12 }]}>
@@ -295,23 +330,24 @@ export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ onBack, onNa
                                     </View>
                                 )}
                                 <View>
-                                    <Text style={styles.rightTitle}>Mis favoritos</Text>
-                                    <Text style={styles.rightSubtitle}>{favoritesCount} {favoritesCount === 1 ? 'afirmación' : 'afirmaciones'}</Text>
+                                    <Text style={[styles.rightTitle, currentTheme === 'light' && styles.textLight]}>Mis favoritos</Text>
+                                    <Text style={[styles.rightSubtitle, currentTheme === 'light' && styles.subtitleLight]}>{favoritesCount} {favoritesCount === 1 ? 'afirmación' : 'afirmaciones'}</Text>
                                 </View>
-                                <MaterialIcons name="favorite" size={20} color="#af25f4" style={styles.rightIcon} />
+                                <MaterialIcons name="favorite" size={20} color={currentTheme === 'light' ? "#7C3AED" : "#af25f4"} style={styles.rightIcon} />
                             </TouchableOpacity>
                         </View>
                     </View>
 
                     {/* For You Section */}
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Para ti</Text>
+                        <Text style={[styles.sectionTitle, currentTheme === 'light' && styles.textLight]}>Para ti</Text>
                         <View style={styles.grid}>
                             <ForYouCard
                                 title="Ansiedad"
                                 icon="notifications-none"
                                 onPress={() => onCategorySelect && onCategorySelect('ANXIETY')}
                                 isActive={activeCategory === 'ANXIETY' && !customMixCategories}
+                                currentTheme={currentTheme}
                             />
                             <ForYouCard
                                 title="Alivio del estrés"
@@ -319,19 +355,21 @@ export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ onBack, onNa
                                 isLocked={!isPremium}
                                 onPress={() => !isPremium ? handleLockedCategory() : onCategorySelect?.('STRESS')}
                                 isActive={activeCategory === 'STRESS' && !customMixCategories}
+                                currentTheme={currentTheme}
                             />
                             <ForYouCard
                                 title="Mindfulness"
                                 icon="spa"
                                 onPress={() => onCategorySelect && onCategorySelect('MINDFULNESS')}
                                 isActive={activeCategory === 'MINDFULNESS' && !customMixCategories}
+                                currentTheme={currentTheme}
                             />
                         </View>
                     </View>
 
                     {/* Explore Section */}
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Explorar</Text>
+                        <Text style={[styles.sectionTitle, currentTheme === 'light' && styles.textLight]}>Explorar</Text>
                         <View style={styles.grid}>
                             {EXPLORE_CATEGORIES.map((cat) => (
                                 <CategoryCard
@@ -342,6 +380,7 @@ export const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ onBack, onNa
                                     fullWidthText={cat.fullWidthText}
                                     onPress={() => !isPremium ? handleLockedCategory() : onCategorySelect?.(cat.id)}
                                     isActive={activeCategory === cat.id && !customMixCategories}
+                                    currentTheme={currentTheme}
                                 />
                             ))}
                         </View>
@@ -359,9 +398,12 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#1c1022',
     },
+    containerLight: {
+        backgroundColor: '#F8F9FA',
+    },
     safeArea: {
         flex: 1,
-        zIndex: 10, // Ensure content is above background (zIndex 1)
+        zIndex: 10,
     },
     scrollView: {
         flex: 1,
@@ -375,7 +417,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 20,
         paddingTop: 10,
-        marginTop: 50, // Push below status bar
+        marginTop: 50,
         marginBottom: 10,
     },
     headerTitle: {
@@ -384,6 +426,12 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         fontFamily: 'System',
         letterSpacing: 0.5,
+    },
+    textLight: {
+        color: '#111827',
+    },
+    subtitleLight: {
+        color: '#6B7280',
     },
     backButton: {
         padding: 4,
@@ -447,6 +495,14 @@ const styles = StyleSheet.create({
         padding: 16,
         justifyContent: 'space-between',
     },
+    generalCardLight: {
+        backgroundColor: '#FFFFFF',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
+    },
     checkBadge: {
         position: 'absolute',
         top: 10,
@@ -480,6 +536,15 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'flex-end',
+    },
+    rightCardLight: {
+        backgroundColor: '#FFFFFF',
+        borderColor: '#F3F4F6',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
     },
     rightTitle: {
         color: '#FFF',
@@ -519,6 +584,15 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(86, 49, 104, 0.5)',
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    gridItemLight: {
+        backgroundColor: '#FFFFFF',
+        borderColor: '#F3F4F6',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
     },
     gridItemContent: {
         flex: 1,

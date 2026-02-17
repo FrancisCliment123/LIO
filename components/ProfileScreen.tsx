@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Image, Modal, TextInput, FlatList, Switch } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Image, Modal, TextInput, FlatList, Switch, Linking, Alert, Keyboard, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import Svg, { Path, Defs, LinearGradient as SvgGradient, Stop, Circle } from 'react-native-svg';
 import { OnboardingData } from '../types';
 import { getStreak, getWeeklyStreak } from '../services/streak';
+import RevenueCatUI from 'react-native-purchases-ui';
+import Purchases from 'react-native-purchases';
 
 const { width } = Dimensions.get('window');
 
@@ -63,14 +65,47 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, userData, 
     const [widgetModalVisible, setWidgetModalVisible] = useState(false);
     const [timeModalVisible, setTimeModalVisible] = useState(false);
     const [editingTimeType, setEditingTimeType] = useState<'start' | 'end' | null>(null);
+    const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
+    const [supportModalVisible, setSupportModalVisible] = useState(false);
+    const [isPremium, setIsPremium] = useState(false);
+    const [retryCount, setRetryCount] = useState(0);
 
     // Temp editing states
     const [tempName, setTempName] = useState('');
     const [tempGender, setTempGender] = useState('');
+    const [feedbackText, setFeedbackText] = useState('');
 
     useEffect(() => {
         loadStreakData();
+        checkPremiumStatus();
     }, []);
+
+    const checkPremiumStatus = async (attempt = 0) => {
+        try {
+            const customerInfo = await Purchases.getCustomerInfo();
+            // Check if user has any active entitlements (including sandbox/dev mode)
+            const hasActiveEntitlements = Object.keys(customerInfo.entitlements.active).length > 0;
+            setIsPremium(hasActiveEntitlements);
+            console.log('Premium status:', hasActiveEntitlements, 'Active entitlements:', Object.keys(customerInfo.entitlements.active));
+        } catch (error: any) {
+            // If RevenueCat is not configured yet or there's an error, default to free
+            if (error?.message?.includes('no singleton instance')) {
+                // Only retry up to 3 times
+                if (attempt < 3) {
+                    console.log(`RevenueCat not configured yet, retrying (${attempt + 1}/3)...`);
+                    setTimeout(() => {
+                        checkPremiumStatus(attempt + 1);
+                    }, 1000);
+                } else {
+                    console.log('RevenueCat not available after 3 attempts, defaulting to free user');
+                    setIsPremium(false);
+                }
+            } else {
+                console.error('Error checking premium status:', error);
+                setIsPremium(false);
+            }
+        }
+    };
 
     const loadStreakData = async () => {
         try {
@@ -266,9 +301,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, userData, 
                                 label="Widget"
                                 onPress={() => setWidgetModalVisible(true)}
                             />
-                            <SettingRow icon="support-agent" label="Centro de atención" />
-                            <SettingRow icon="favorite" label="Mis favoritos" />
-                            <SettingRow icon="chat-bubble" label="Feedback" />
+                            <SettingRow icon="support-agent" label="Centro de atención" onPress={() => {
+                                setSupportModalVisible(true);
+                            }} />
+                            <SettingRow icon="favorite" label="Mis favoritos" onPress={() => onNavigate?.('FAVORITES')} />
+                            <SettingRow icon="chat-bubble" label="Feedback" onPress={() => {
+                                setFeedbackModalVisible(true);
+                            }} />
                         </View>
                     </View>
 
@@ -276,8 +315,24 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, userData, 
                     <View style={styles.section}>
                         <Text style={styles.sectionHeader}>Legal</Text>
                         <View style={styles.listContainer}>
-                            <SettingRow icon="shield" label="Política de privacidad" />
-                            <SettingRow icon="description" label="Términos de uso" />
+                            <SettingRow icon="shield" label="Política de privacidad" onPress={async () => {
+                                const url = 'https://lio-landingpage.vercel.app/privacy';
+                                const canOpen = await Linking.canOpenURL(url);
+                                if (canOpen) {
+                                    await Linking.openURL(url);
+                                } else {
+                                    Alert.alert('Error', 'No se pudo abrir el enlace');
+                                }
+                            }} />
+                            <SettingRow icon="description" label="Términos de uso" onPress={async () => {
+                                const url = 'https://lio-landingpage.vercel.app/terms';
+                                const canOpen = await Linking.canOpenURL(url);
+                                if (canOpen) {
+                                    await Linking.openURL(url);
+                                } else {
+                                    Alert.alert('Error', 'No se pudo abrir el enlace');
+                                }
+                            }} />
                         </View>
                     </View>
 
@@ -292,49 +347,82 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, userData, 
                 visible={nameModalVisible}
                 transparent={true}
                 animationType="slide"
-                onRequestClose={() => setNameModalVisible(false)}
+                onRequestClose={() => {
+                    Keyboard.dismiss();
+                    setNameModalVisible(false);
+                }}
             >
-                <TouchableOpacity
-                    style={styles.modalOverlay}
-                    activeOpacity={1}
-                    onPress={() => setNameModalVisible(false)}
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={{ flex: 1 }}
                 >
-                    <View style={styles.modalContent}>
-                        <GlassCard style={styles.modalCard}>
-                            <View style={styles.modalHeader}>
-                                <Text style={styles.modalTitle}>Editar nombre</Text>
-                                <TouchableOpacity onPress={() => setNameModalVisible(false)}>
-                                    <MaterialIcons name="close" size={24} color="rgba(255,255,255,0.5)" />
-                                </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.modalOverlay}
+                        activeOpacity={1}
+                        onPress={() => {
+                            Keyboard.dismiss();
+                            setNameModalVisible(false);
+                        }}
+                    >
+                        <ScrollView
+                            contentContainerStyle={styles.modalContentCentered}
+                            keyboardShouldPersistTaps="handled"
+                            showsVerticalScrollIndicator={false}
+                        >
+                            <View onStartShouldSetResponder={() => true}>
+                                <GlassCard style={styles.modalCard}>
+                                    <View style={styles.modalHeader}>
+                                        <Text style={styles.modalTitle}>Editar nombre</Text>
+                                        <TouchableOpacity onPress={() => {
+                                            Keyboard.dismiss();
+                                            setNameModalVisible(false);
+                                        }}>
+                                            <MaterialIcons name="close" size={24} color="rgba(255,255,255,0.5)" />
+                                        </TouchableOpacity>
+                                    </View>
+                                    <View style={[styles.input, { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 }]}>
+                                        <MaterialIcons name="edit" size={20} color="rgba(255,255,255,0.5)" style={{ marginRight: 10 }} />
+                                        <TextInput
+                                            style={{ flex: 1, color: '#FFF', fontSize: 16 }}
+                                            placeholder="Tu nombre"
+                                            placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                                            value={tempName}
+                                            onChangeText={setTempName}
+                                            autoFocus={false}
+                                            returnKeyType="done"
+                                            onSubmitEditing={() => Keyboard.dismiss()}
+                                        />
+                                    </View>
+                                    <TouchableOpacity
+                                        onPress={() => Keyboard.dismiss()}
+                                        style={[styles.keyboardDismissButton, { marginBottom: 16 }]}
+                                        activeOpacity={0.7}
+                                    >
+                                        <MaterialIcons name="keyboard-hide" size={20} color="#A78BFA" />
+                                        <Text style={styles.keyboardDismissText}>Ocultar teclado</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        onPress={() => {
+                                            Keyboard.dismiss();
+                                            handleSaveName();
+                                        }}
+                                        style={styles.saveButton}
+                                        activeOpacity={0.9}
+                                    >
+                                        <LinearGradient
+                                            colors={['#4C1D95', '#6D28D9', '#7C3AED']}
+                                            start={{ x: 0, y: 0 }}
+                                            end={{ x: 1, y: 0 }}
+                                            style={styles.saveButtonGradient}
+                                        >
+                                            <Text style={styles.saveButtonText}>Guardar</Text>
+                                        </LinearGradient>
+                                    </TouchableOpacity>
+                                </GlassCard>
                             </View>
-                            <View style={[styles.input, { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 }]}>
-                                <MaterialIcons name="edit" size={20} color="rgba(255,255,255,0.5)" style={{ marginRight: 10 }} />
-                                <TextInput
-                                    style={{ flex: 1, color: '#FFF', fontSize: 16 }}
-                                    placeholder="Tu nombre"
-                                    placeholderTextColor="rgba(255, 255, 255, 0.5)"
-                                    value={tempName}
-                                    onChangeText={setTempName}
-                                    autoFocus={true}
-                                />
-                            </View>
-                            <TouchableOpacity
-                                onPress={handleSaveName}
-                                style={styles.saveButton}
-                                activeOpacity={0.9}
-                            >
-                                <LinearGradient
-                                    colors={['#4C1D95', '#6D28D9', '#7C3AED']}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 0 }}
-                                    style={styles.saveButtonGradient}
-                                >
-                                    <Text style={styles.saveButtonText}>Guardar</Text>
-                                </LinearGradient>
-                            </TouchableOpacity>
-                        </GlassCard>
-                    </View>
-                </TouchableOpacity>
+                        </ScrollView>
+                    </TouchableOpacity>
+                </KeyboardAvoidingView>
             </Modal>
 
             {/* Gender Selection Modal */}
@@ -676,6 +764,205 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, userData, 
                         </ScrollView>
                     </SafeAreaView>
                 </View>
+            </Modal>
+
+            {/* Feedback Modal */}
+            <Modal
+                visible={feedbackModalVisible}
+                transparent={true}
+                animationType="slide"
+                onRequestClose={() => {
+                    Keyboard.dismiss();
+                    setFeedbackModalVisible(false);
+                }}
+            >
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={{ flex: 1 }}
+                >
+                    <TouchableOpacity
+                        style={styles.modalOverlay}
+                        activeOpacity={1}
+                        onPress={() => {
+                            Keyboard.dismiss();
+                            setFeedbackModalVisible(false);
+                        }}
+                    >
+                        <ScrollView
+                            contentContainerStyle={styles.modalContentCentered}
+                            keyboardShouldPersistTaps="handled"
+                            showsVerticalScrollIndicator={false}
+                        >
+                            <View onStartShouldSetResponder={() => true}>
+                                <GlassCard style={styles.modalCard}>
+                                    <View style={styles.modalHeader}>
+                                        <Text style={styles.modalTitle}>Enviar Feedback</Text>
+                                        <TouchableOpacity onPress={() => {
+                                            Keyboard.dismiss();
+                                            setFeedbackModalVisible(false);
+                                            setFeedbackText('');
+                                        }}>
+                                            <MaterialIcons name="close" size={24} color="rgba(255,255,255,0.5)" />
+                                        </TouchableOpacity>
+                                    </View>
+                                    <Text style={styles.feedbackSubtitle}>
+                                        ¿Tienes alguna sugerencia o comentario? Nos encantaría escucharte.
+                                    </Text>
+                                    <View style={[styles.input, { height: 120, paddingTop: 16, alignItems: 'flex-start' }]}>
+                                        <TextInput
+                                            style={{ flex: 1, color: '#FFF', fontSize: 16, textAlignVertical: 'top', width: '100%' }}
+                                            placeholder="Escribe tu comentario aquí..."
+                                            placeholderTextColor="rgba(255, 255, 255, 0.4)"
+                                            value={feedbackText}
+                                            onChangeText={setFeedbackText}
+                                            multiline={true}
+                                            numberOfLines={5}
+                                            maxLength={500}
+                                            autoFocus={false}
+                                            blurOnSubmit={false}
+                                            returnKeyType="done"
+                                            onSubmitEditing={() => Keyboard.dismiss()}
+                                        />
+                                    </View>
+                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, marginBottom: 16 }}>
+                                        <TouchableOpacity
+                                            onPress={() => Keyboard.dismiss()}
+                                            style={styles.keyboardDismissButton}
+                                            activeOpacity={0.7}
+                                        >
+                                            <MaterialIcons name="keyboard-hide" size={20} color="#A78BFA" />
+                                            <Text style={styles.keyboardDismissText}>Ocultar teclado</Text>
+                                        </TouchableOpacity>
+                                        <Text style={styles.characterCount}>{feedbackText.length}/500</Text>
+                                    </View>
+                                    <TouchableOpacity
+                                        onPress={() => {
+                                            if (feedbackText.trim()) {
+                                                Keyboard.dismiss();
+                                                Linking.openURL(`mailto:feedback@lioapp.com?subject=Feedback sobre Lio App&body=${encodeURIComponent(feedbackText)}`);
+                                                setFeedbackModalVisible(false);
+                                                setFeedbackText('');
+                                            } else {
+                                                Alert.alert('Feedback vacío', 'Por favor escribe algo antes de enviar.');
+                                            }
+                                        }}
+                                        style={styles.saveButton}
+                                        activeOpacity={0.9}
+                                    >
+                                        <LinearGradient
+                                            colors={['#4C1D95', '#6D28D9', '#7C3AED']}
+                                            start={{ x: 0, y: 0 }}
+                                            end={{ x: 1, y: 0 }}
+                                            style={styles.saveButtonGradient}
+                                        >
+                                            <Text style={styles.saveButtonText}>Enviar</Text>
+                                        </LinearGradient>
+                                    </TouchableOpacity>
+                                </GlassCard>
+                            </View>
+                        </ScrollView>
+                    </TouchableOpacity>
+                </KeyboardAvoidingView>
+            </Modal>
+
+            {/* Support Center Modal */}
+            <Modal
+                visible={supportModalVisible}
+                transparent={true}
+                animationType="slide"
+                onRequestClose={() => setSupportModalVisible(false)}
+            >
+                <TouchableOpacity
+                    style={styles.modalOverlay}
+                    activeOpacity={1}
+                    onPress={() => setSupportModalVisible(false)}
+                >
+                    <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
+                        <GlassCard style={[styles.modalCard, { paddingVertical: 40 }]}>
+                            <TouchableOpacity
+                                style={styles.modalCloseButton}
+                                onPress={() => setSupportModalVisible(false)}
+                            >
+                                <MaterialIcons name="close" size={24} color="rgba(255,255,255,0.5)" />
+                            </TouchableOpacity>
+
+                            <View style={styles.supportIconContainer}>
+                                <View style={styles.supportIconCircle}>
+                                    <MaterialIcons name="info-outline" size={40} color="#A78BFA" />
+                                </View>
+                            </View>
+
+                            <Text style={[styles.modalTitle, { textAlign: 'center', marginBottom: 8, fontSize: 24 }]}>Centro de Atención</Text>
+
+                            {!isPremium ? (
+                                <>
+                                    <Text style={[styles.modalTitle, { textAlign: 'center', marginBottom: 8, fontSize: 20, fontWeight: '600' }]}>Plan Gratuito</Text>
+                                    <Text style={styles.supportSubtitle}>
+                                        No tienes una suscripción activa. Desbloquea todas las funciones premium.
+                                    </Text>
+                                    <TouchableOpacity
+                                        onPress={async () => {
+                                            setSupportModalVisible(false);
+                                            try {
+                                                await RevenueCatUI.presentPaywall();
+                                            } catch (error) {
+                                                console.error('Error opening paywall:', error);
+                                            }
+                                        }}
+                                        style={[styles.saveButton, { marginTop: 24 }]}
+                                        activeOpacity={0.9}
+                                    >
+                                        <LinearGradient
+                                            colors={['#4C1D95', '#6D28D9', '#7C3AED']}
+                                            start={{ x: 0, y: 0 }}
+                                            end={{ x: 1, y: 0 }}
+                                            style={styles.saveButtonGradient}
+                                        >
+                                            <Text style={styles.saveButtonText}>Ver planes premium</Text>
+                                        </LinearGradient>
+                                    </TouchableOpacity>
+                                </>
+                            ) : (
+                                <>
+                                    <Text style={styles.supportSubtitle}>
+                                        ¿Cómo podemos ayudarte?
+                                    </Text>
+                                    <TouchableOpacity
+                                        onPress={async () => {
+                                            setSupportModalVisible(false);
+                                            try {
+                                                await RevenueCatUI.presentCustomerCenter();
+                                            } catch (error) {
+                                                console.error('Error opening customer center:', error);
+                                            }
+                                        }}
+                                        style={[styles.saveButton, { marginTop: 24, marginBottom: 12 }]}
+                                        activeOpacity={0.9}
+                                    >
+                                        <LinearGradient
+                                            colors={['#4C1D95', '#6D28D9', '#7C3AED']}
+                                            start={{ x: 0, y: 0 }}
+                                            end={{ x: 1, y: 0 }}
+                                            style={styles.saveButtonGradient}
+                                        >
+                                            <Text style={styles.saveButtonText}>Gestionar suscripción</Text>
+                                        </LinearGradient>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        onPress={() => {
+                                            setSupportModalVisible(false);
+                                            Linking.openURL('mailto:support@lioapp.com?subject=Soporte Lio App');
+                                        }}
+                                        style={styles.secondaryButton}
+                                        activeOpacity={0.9}
+                                    >
+                                        <Text style={styles.secondaryButtonText}>Contactar soporte</Text>
+                                    </TouchableOpacity>
+                                </>
+                            )}
+                        </GlassCard>
+                    </View>
+                </TouchableOpacity>
             </Modal>
         </View>
     );
@@ -1089,17 +1376,7 @@ const styles = StyleSheet.create({
         fontStyle: 'italic',
         lineHeight: 18,
     },
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.7)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 30,
-    },
-    modalContent: {
-        width: '100%',
-        maxHeight: '60%',
-    },
+
     timePickerContainer: {
         width: '100%',
         padding: 24,
@@ -1206,5 +1483,84 @@ const styles = StyleSheet.create({
         color: 'rgba(255, 255, 255, 0.8)',
         flex: 1,
         lineHeight: 24,
+    },
+    // Feedback Modal Styles
+    feedbackSubtitle: {
+        fontSize: 14,
+        color: 'rgba(255, 255, 255, 0.7)',
+        marginBottom: 20,
+        lineHeight: 20,
+    },
+    characterCount: {
+        fontSize: 12,
+        color: 'rgba(255, 255, 255, 0.5)',
+        textAlign: 'right',
+        marginTop: 8,
+        marginBottom: 16,
+    },
+    // Support Center Modal Styles
+    modalCloseButton: {
+        position: 'absolute',
+        top: 16,
+        right: 16,
+        zIndex: 10,
+    },
+    supportIconContainer: {
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    supportIconCircle: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: 'rgba(167, 139, 250, 0.15)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 2,
+        borderColor: 'rgba(167, 139, 250, 0.3)',
+    },
+    supportSubtitle: {
+        fontSize: 15,
+        color: 'rgba(255, 255, 255, 0.7)',
+        textAlign: 'center',
+        lineHeight: 22,
+        paddingHorizontal: 16,
+    },
+    secondaryButton: {
+        width: '100%',
+        borderRadius: 16,
+        paddingVertical: 16,
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    secondaryButtonText: {
+        color: '#A78BFA',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    modalContentCentered: {
+        flexGrow: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    keyboardDismissButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        padding: 8,
+        paddingHorizontal: 12,
+        backgroundColor: 'rgba(167, 139, 250, 0.1)',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(167, 139, 250, 0.2)',
+    },
+    keyboardDismissText: {
+        fontSize: 13,
+        color: '#A78BFA',
+        fontWeight: '500',
     },
 });

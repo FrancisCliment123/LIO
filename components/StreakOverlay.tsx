@@ -53,6 +53,16 @@ export const StreakOverlay: React.FC<StreakOverlayProps> = ({
                 }).start();
             }, 500);
 
+            // 3. Auto-dismiss after 3 seconds
+            const autoDismissTimer = setTimeout(() => {
+                onClose();
+            }, 3000);
+
+            // Cleanup timer when component unmounts or visibility changes
+            return () => {
+                clearTimeout(autoDismissTimer);
+            };
+
         } else {
             // Reset animations when hidden
             slideAnim.setValue(-150);

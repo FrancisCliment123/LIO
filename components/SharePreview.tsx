@@ -12,7 +12,6 @@ export const SharePreview: React.FC<SharePreviewProps> = ({ affirmation, showLog
             <View style={styles.contentContainer}>
                 {/* Main Content */}
                 <View style={styles.centerContent}>
-                    <Text style={styles.quoteIcon}>"</Text>
                     <Text style={styles.text}>{affirmation}</Text>
                 </View>
 
@@ -49,12 +48,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         width: '100%',
-    },
-    quoteIcon: {
-        fontSize: 60,
-        color: 'rgba(255,255,255,0.3)',
-        marginBottom: 20,
-        fontFamily: 'System',
+        marginTop: -60,
     },
     text: {
         fontSize: 32,
@@ -66,8 +60,8 @@ const styles = StyleSheet.create({
     },
     logoContainer: {
         position: 'absolute',
-        bottom: 30,
-        left: 30,
+        bottom: 15,
+        left: 15,
     },
     logo: {
         width: 50,

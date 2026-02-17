@@ -5,6 +5,7 @@ export enum ScreenName {
   INTERESTS = 'INTERESTS',
   STREAK = 'STREAK',
   MENTAL_HEALTH = 'MENTAL_HEALTH',
+  BENEFITS = 'BENEFITS',
   NOTIFICATIONS = 'NOTIFICATIONS',
   GENDER = 'GENDER',
   WIDGET = 'WIDGET',
@@ -14,6 +15,7 @@ export enum ScreenName {
   PROFILE = 'PROFILE',
   SUBSCRIPTION = 'SUBSCRIPTION',
   CUSTOM_MIX = 'CUSTOM_MIX',
+  MY_PHRASES = 'MY_PHRASES',
 }
 
 export interface OnboardingData {

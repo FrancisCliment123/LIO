@@ -58,10 +58,6 @@ export const ShareCard = forwardRef<ShareCardHandle, ShareCardProps>(({ affirmat
                 <View style={styles.contentContainer}>
                     {/* Main Content */}
                     <View style={styles.centerContent}>
-                        <View style={styles.quoteIconContainer}>
-                            <Text style={styles.quoteIcon}>"</Text>
-                        </View>
-
                         <Text style={styles.text}>
                             {affirmation}
                         </Text>
@@ -94,15 +90,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         width: '100%',
-    },
-    quoteIconContainer: {
-        marginBottom: 40,
-        opacity: 0.3,
-    },
-    quoteIcon: {
-        fontSize: 120,
-        color: '#FFFFFF',
-        fontFamily: 'System',
+        marginTop: -120,
     },
     text: {
         fontSize: 64, // Large text for story
@@ -115,8 +103,8 @@ const styles = StyleSheet.create({
     },
     logoContainer: {
         position: 'absolute',
-        bottom: 60,
-        left: 60,
+        bottom: 30,
+        left: 30,
     },
     logo: {
         width: 100,

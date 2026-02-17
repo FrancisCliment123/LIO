@@ -4,6 +4,7 @@ import Purchases, {
     PurchasesPackage,
     LOG_LEVEL,
 } from 'react-native-purchases';
+import RevenueCatUI from 'react-native-purchases-ui';
 import { Platform } from 'react-native';
 
 // RevenueCat API Keys
@@ -23,8 +24,10 @@ export interface SubscriptionStatus {
     isPremium: boolean;
     productIdentifier?: string;
     expirationDate?: string;
+    expirationDateFormatted?: string; // Human-readable date
     willRenew: boolean;
     isLifetime: boolean;
+    planType?: 'monthly' | 'annual' | 'unknown';
 }
 
 // Initialize RevenueCat SDK
@@ -77,6 +80,8 @@ export const checkPremiumStatus = async (): Promise<SubscriptionStatus> => {
                 productIdentifier: 'dev-mode',
                 willRenew: false,
                 isLifetime: true,
+                planType: 'annual',
+                expirationDateFormatted: '∞ (Dev Mode)',
             };
         }
 
@@ -86,12 +91,33 @@ export const checkPremiumStatus = async (): Promise<SubscriptionStatus> => {
         if (entitlement) {
             const isLifetime = entitlement.productIdentifier === PRODUCT_IDS.annual;
 
+            // Determine plan type
+            let planType: 'monthly' | 'annual' | 'unknown' = 'unknown';
+            if (entitlement.productIdentifier === PRODUCT_IDS.monthly) {
+                planType = 'monthly';
+            } else if (entitlement.productIdentifier === PRODUCT_IDS.annual) {
+                planType = 'annual';
+            }
+
+            // Format expiration date
+            let expirationDateFormatted = '';
+            if (entitlement.expirationDate) {
+                const date = new Date(entitlement.expirationDate);
+                expirationDateFormatted = date.toLocaleDateString('es-ES', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+            }
+
             return {
                 isPremium: true,
                 productIdentifier: entitlement.productIdentifier,
                 expirationDate: entitlement.expirationDate,
+                expirationDateFormatted,
                 willRenew: entitlement.willRenew,
                 isLifetime,
+                planType,
             };
         }
 
@@ -99,6 +125,7 @@ export const checkPremiumStatus = async (): Promise<SubscriptionStatus> => {
             isPremium: false,
             willRenew: false,
             isLifetime: false,
+            planType: 'unknown',
         };
     } catch (error) {
         console.error('Failed to check premium status:', error);
@@ -106,6 +133,7 @@ export const checkPremiumStatus = async (): Promise<SubscriptionStatus> => {
             isPremium: false,
             willRenew: false,
             isLifetime: false,
+            planType: 'unknown',
         };
     }
 };
@@ -233,4 +261,15 @@ export const getProductInfo = (pkg: PurchasesPackage) => {
         currencyCode: product.currencyCode,
         introPrice: product.introPrice?.priceString,
     };
+};
+
+// Open RevenueCat Customer Center for subscription management
+export const openCustomerCenter = async (): Promise<void> => {
+    try {
+        await RevenueCatUI.presentCustomerCenter();
+        console.log('✅ Customer Center opened');
+    } catch (error) {
+        console.error('❌ Failed to open Customer Center:', error);
+        throw error;
+    }
 };

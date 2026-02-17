@@ -6,8 +6,11 @@ import { StarParticles } from './StarParticles';
 const AnimatedGradient = Animated.createAnimatedComponent(LinearGradient);
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-export const CinematicBackground: React.FC = () => {
+import { ThemeType, getTheme } from '../styles/theme';
+
+export const CinematicBackground: React.FC<{ theme?: ThemeType }> = ({ theme = 'dark' }) => {
   const breathingAnim = React.useRef(new Animated.Value(0)).current;
+  const currentTheme = getTheme(theme);
 
   React.useEffect(() => {
     Animated.loop(
@@ -30,10 +33,10 @@ export const CinematicBackground: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      {/* Base gradient - Deep Blue foundation */}
+      {/* Base gradient - Dynamic based on theme */}
       <LinearGradient
-        colors={['#0a0d1f', '#1a1535', '#0f1a3d', '#0a0d1f']}
-        locations={[0, 0.3, 0.7, 1]}
+        colors={currentTheme.background.primary as any}
+        locations={currentTheme.background.locations as any}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
         style={styles.layer}
@@ -42,68 +45,38 @@ export const CinematicBackground: React.FC = () => {
       {/* Upper diffuse glow - Purple tint (Breathing) */}
       <AnimatedGradient
         colors={[
-          'rgba(147, 112, 219, 0.12)',
-          'rgba(147, 112, 219, 0.08)',
-          'rgba(147, 112, 219, 0.04)',
+          theme === 'dark' ? 'rgba(147, 112, 219, 0.12)' : 'rgba(124, 58, 237, 0.05)',
+          theme === 'dark' ? 'rgba(147, 112, 219, 0.08)' : 'rgba(124, 58, 237, 0.02)',
           'transparent',
           'transparent'
         ]}
-        locations={[0, 0.2, 0.4, 0.6, 1]}
+        locations={[0, 0.4, 0.6, 1]}
         start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 0.5 }}
+        end={{ x: 0.5, y: 0.8 }}
         style={[styles.layer, {
           opacity: breathingAnim.interpolate({
             inputRange: [0, 1],
-            outputRange: [0.7, 1]
+            outputRange: [0.3, 0.6]
           })
         }]}
       />
 
-      {/* Center ambient glow - Soft radial effect (Breathing inverse) */}
-      <AnimatedGradient
-        colors={[
-          'transparent',
-          'transparent',
-          'rgba(167, 139, 250, 0.05)',
-          'rgba(167, 139, 250, 0.02)',
-          'transparent'
-        ]}
-        locations={[0, 0.25, 0.45, 0.65, 1]}
-        start={{ x: 0.5, y: 0.3 }}
-        end={{ x: 0.5, y: 0.7 }}
-        style={[styles.layer, {
-          opacity: breathingAnim.interpolate({
-            inputRange: [0, 1],
-            outputRange: [1, 0.5]
-          })
-        }]}
-      />
+      {/* Star Particles Overlay - Pass theme color */}
+      <StarParticles color={currentTheme.particles.color} opacity={currentTheme.particles.opacity} />
 
-      {/* Bottom gradient - Darker anchor */}
+      {/* Subtle vignettes for depth (Dark mode only or very subtle in light) */}
       <LinearGradient
         colors={[
+          theme === 'dark' ? 'rgba(10, 13, 31, 0.3)' : 'transparent',
           'transparent',
-          'transparent',
-          'rgba(10, 13, 31, 0.4)',
-          'rgba(10, 13, 31, 0.7)'
+          theme === 'dark' ? 'rgba(10, 13, 31, 0.5)' : 'rgba(255, 255, 255, 0.2)'
         ]}
-        locations={[0, 0.6, 0.85, 1]}
+        locations={[0, 0.5, 1]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
         style={styles.layer}
+        pointerEvents="none"
       />
-
-      {/* Subtle side vignettes */}
-      <LinearGradient
-        colors={['rgba(10, 13, 31, 0.2)', 'transparent', 'transparent', 'rgba(10, 13, 31, 0.2)']}
-        locations={[0, 0.2, 0.8, 1]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.layer}
-      />
-
-      {/* Star Particles Overlay */}
-      <StarParticles />
     </View>
   );
 };

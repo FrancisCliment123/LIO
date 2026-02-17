@@ -17,14 +17,19 @@ interface StarParticle {
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-export const StarParticles: React.FC = () => {
+interface StarParticlesProps {
+  color?: string;
+  opacity?: number;
+}
+
+export const StarParticles: React.FC<StarParticlesProps> = ({ color = '#FFFFFF', opacity = 1 }) => {
   const [particles, setParticles] = useState<StarParticle[]>([]);
-  const animationFrameRef = useRef<number>();
+  const animationFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
     const generateParticles = () => {
       const newParticles: StarParticle[] = [];
-      
+
       const layerConfigs = [
         { count: 6, sizeRange: [2, 3], speedRange: [0.005, 0.01], opacityRange: [0.2, 0.4] },
         { count: 8, sizeRange: [1.5, 2.5], speedRange: [0.01, 0.02], opacityRange: [0.4, 0.6] },
@@ -39,13 +44,13 @@ export const StarParticles: React.FC = () => {
           const size = Math.random() * (config.sizeRange[1] - config.sizeRange[0]) + config.sizeRange[0];
           const baseOpacity = Math.random() * (config.opacityRange[1] - config.opacityRange[0]) + config.opacityRange[0];
           const speed = Math.random() * (config.speedRange[1] - config.speedRange[0]) + config.speedRange[0];
-          
+
           const angle = Math.random() * Math.PI * 2;
           const vx = Math.cos(angle) * speed;
           const vy = Math.sin(angle) * speed;
 
           const hasTwinkle = layerIndex === 3;
-          
+
           newParticles.push({
             id: particleId++,
             size,
@@ -61,7 +66,7 @@ export const StarParticles: React.FC = () => {
           });
         }
       });
-      
+
       setParticles(newParticles);
     };
 
@@ -117,22 +122,21 @@ export const StarParticles: React.FC = () => {
       {particles.map((particle) => (
         <View
           key={particle.id}
-          style={[
-            styles.particle,
-            {
-              width: particle.size,
-              height: particle.size,
-              left: particle.x,
-              top: particle.y,
-              borderRadius: particle.size / 2,
-              backgroundColor: `rgba(255, 255, 255, ${particle.opacity})`,
-              shadowColor: '#FFFFFF',
-              shadowOffset: { width: 0, height: 0 },
-              shadowOpacity: particle.opacity * 0.6,
-              shadowRadius: particle.size * 2,
-              elevation: particle.size,
-            },
-          ]}
+          style={{
+            position: 'absolute',
+            width: particle.size,
+            height: particle.size,
+            left: particle.x,
+            top: particle.y,
+            borderRadius: particle.size / 2,
+            backgroundColor: color, // Use prop color
+            shadowColor: color,     // Use prop color for shadow
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: particle.opacity * 0.6 * opacity, // Scale prop opacity
+            shadowRadius: particle.size * 2,
+            elevation: particle.size,
+            opacity: particle.opacity * opacity, // Scale base opacity
+          }}
         />
       ))}
     </View>

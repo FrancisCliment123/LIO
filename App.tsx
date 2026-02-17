@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Dimensions, Animated, Modal, Image, Platform, InteractionManager } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Dimensions, Animated, Modal, Image, Platform, InteractionManager, Alert } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -25,8 +26,11 @@ import { StreakOverlay } from './components/StreakOverlay';
 import { SwipeIndicator } from './components/SwipeIndicator';
 import { CosmicLoader } from './components/CosmicLoader';
 import { ShareModal } from './components/ShareModal';
+import { BenefitsScreen } from './components/BenefitsScreen';
+import { MyPhrasesScreen } from './components/MyPhrasesScreen';
 import * as Sharing from 'expo-sharing';
 import Purchases, { LOG_LEVEL } from 'react-native-purchases';
+import { ThemeType, getTheme } from './styles/theme';
 import {
   useFonts,
   PlaywriteNZBasic_100Thin,
@@ -166,10 +170,22 @@ const AgeScreen: React.FC<{
   onNext: () => void;
   onBack: () => void;
 }> = ({ selected, onSelect, onNext, onBack }) => {
-  const ranges = ["13 a 17", "18 a 24", "25 a 34", "35 a 44", "45 a 54", "+55"];
+  const ranges = ["Menor de 13", "13 a 17", "18 a 24", "25 a 34", "35 a 44", "45 a 54", "+55"];
+
+  const handleSelect = (range: string) => {
+    if (range === "Menor de 13") {
+      Alert.alert(
+        "Privacidad de Menores",
+        "Lo sentimos, Lio no está destinada a menores de 13 años. No recopilamos información de niños por motivos de seguridad y privacidad.",
+        [{ text: "Entendido" }]
+      );
+      return;
+    }
+    onSelect(range);
+  };
 
   return (
-    <OnboardingLayout onContinue={onNext} onSkip={onNext} onBack={onBack} isValid={!!selected} currentStep={2} totalSteps={8}>
+    <OnboardingLayout onContinue={onNext} onSkip={onNext} onBack={onBack} isValid={!!selected && selected !== "Menor de 13"} currentStep={2} totalSteps={8}>
       <View style={styles.screenContent}>
         <View style={{ alignItems: 'center', marginBottom: 20 }}>
           <Image
@@ -186,10 +202,11 @@ const AgeScreen: React.FC<{
           {ranges.map((range) => (
             <TouchableOpacity
               key={range}
-              onPress={() => onSelect(range)}
+              onPress={() => handleSelect(range)}
               style={[
                 styles.optionCard,
-                selected === range && styles.optionCardSelected
+                selected === range && styles.optionCardSelected,
+                range === "Menor de 13" && { opacity: 0.8 }
               ]}
             >
               <Text style={styles.optionText}>{range}</Text>
@@ -198,6 +215,13 @@ const AgeScreen: React.FC<{
               </View>
             </TouchableOpacity>
           ))}
+        </View>
+
+        <View style={styles.privacyNoticeContainer}>
+          <Text style={styles.privacyNoticeTitle}>Privacidad de Menores</Text>
+          <Text style={styles.privacyNoticeText}>
+            La App no está destinada a niños menores de 13 años (o la edad aplicable de consentimiento digital en tu jurisdicción). No recopilamos conscientemente información personal de niños. Si crees que hemos recopilado información de un niño, contáctanos inmediatamente.
+          </Text>
         </View>
       </View>
     </OnboardingLayout>
@@ -359,7 +383,7 @@ const MentalHealthScreen: React.FC<{
   ];
 
   return (
-    <OnboardingLayout onContinue={onNext} onSkip={onNext} onBack={onBack} currentStep={5} totalSteps={8}>
+    <OnboardingLayout onContinue={onNext} onSkip={onNext} onBack={onBack} currentStep={5} totalSteps={9}>
       <View style={styles.screenContent}>
         <View style={{ alignItems: 'center', marginBottom: 20 }}>
           <Image
@@ -428,7 +452,7 @@ const NotificationScreen: React.FC<{
   };
 
   return (
-    <OnboardingLayout onContinue={onNext} onSkip={onNext} onBack={onBack} continueText="Permitir" currentStep={6} totalSteps={8}>
+    <OnboardingLayout onContinue={onNext} onSkip={onNext} onBack={onBack} continueText="Permitir" currentStep={7} totalSteps={9}>
       <View style={styles.screenContent}>
         <Text style={[styles.screenTitle, { marginBottom: 4, fontSize: 26, lineHeight: 32 }]}>Recibe afirmaciones a lo largo del día</Text>
         <Text style={[styles.screenSubtitle, { marginBottom: 0, fontSize: 14 }]}>Leer afirmaciones regularmente te ayudará a alcanzar tus metas</Text>
@@ -575,7 +599,7 @@ const GenderScreen: React.FC<{
   const options = ["Femenino", "Masculino", "Otros", "Prefiero no decirlo"];
 
   return (
-    <OnboardingLayout onContinue={onNext} onSkip={onNext} onBack={onBack} isValid={!!selected} currentStep={7} totalSteps={8}>
+    <OnboardingLayout onContinue={onNext} onSkip={onNext} onBack={onBack} isValid={!!selected} currentStep={8} totalSteps={9}>
       <View style={styles.screenContent}>
         <View style={{ alignItems: 'center', marginBottom: 20 }}>
           <Image
@@ -671,8 +695,8 @@ const WidgetScreen: React.FC<{ onNext: () => void; onBack: () => void }> = ({ on
             </View>
           </View>
         </View>
-      </View>
-    </OnboardingLayout>
+      </View >
+    </OnboardingLayout >
   );
 };
 
@@ -684,7 +708,8 @@ const HomeScreen: React.FC<{
   userData: OnboardingData;
   activeCategory?: string;
   customMixCategories?: string[] | null;
-}> = ({ onReset, onNavigate, userData, activeCategory, customMixCategories }) => {
+  theme: ThemeType;
+}> = ({ onReset, onNavigate, userData, activeCategory, customMixCategories, theme }) => {
   const [affirmations, setAffirmations] = useState<Affirmation[]>([]);
   const [loading, setLoading] = useState(false);
   const [likedAffirmations, setLikedAffirmations] = useState<Set<string>>(new Set());
@@ -704,7 +729,12 @@ const HomeScreen: React.FC<{
     loadMore();
   }, []);
 
+
+
   const handleScroll = async () => {
+    // Light impact for scroll snap
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
     // Hide swipe indicator on first scroll interaction
     if (showSwipeIndicator) {
       setShowSwipeIndicator(false);
@@ -721,6 +751,8 @@ const HomeScreen: React.FC<{
         setCurrentStreak(result.currentStreak);
         setShowStreakOverlay(true);
         setHasScrolledToday(true);
+        // Success haptic for streak update
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
     } catch (error) {
       console.error('Error marking streak interaction:', error);
@@ -738,6 +770,8 @@ const HomeScreen: React.FC<{
     const isLiked = likedAffirmations.has(affirmation.id);
 
     if (isLiked) {
+      // Light impact for unliking
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       await removeFavorite(affirmation.id);
       setLikedAffirmations(prev => {
         const newSet = new Set(prev);
@@ -746,6 +780,8 @@ const HomeScreen: React.FC<{
       });
       setFavoritesCount(prev => prev - 1);
     } else {
+      // Success notification for liking
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       await addFavorite(affirmation);
       setLikedAffirmations(prev => new Set([...prev, affirmation.id]));
       setFavoritesCount(prev => prev + 1);
@@ -757,7 +793,9 @@ const HomeScreen: React.FC<{
   }
 
 
-  const handleShare = (affirmation: Affirmation) => {
+  const handleShare = async (affirmation: Affirmation) => {
+    // Medium impact for sharing
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSharingAffirmation(affirmation);
     setShowShareModal(true);
   };
@@ -766,11 +804,67 @@ const HomeScreen: React.FC<{
     if (loading) return;
     setLoading(true);
     try {
-      // Use the batch function to get multiple affirmations at once
-      // If customMixCategories is set, use it; otherwise use single category
-      const newAffirmations = customMixCategories && customMixCategories.length > 0
-        ? await generateAffirmationsBatch(userData, 3, undefined, customMixCategories)
-        : await generateAffirmationsBatch(userData, 3, activeCategory);
+      let newAffirmations: Affirmation[] = [];
+
+      // Check if we need to handle special categories (MY_PHRASES, FAVORITES)
+      const hasSpecialCategories = customMixCategories && customMixCategories.length > 0 &&
+        (customMixCategories.includes('MY_PHRASES') || customMixCategories.includes('FAVORITES'));
+
+      if (hasSpecialCategories) {
+        // Handle custom mix with special categories
+        const regularCategories = customMixCategories!.filter(
+          cat => cat !== 'MY_PHRASES' && cat !== 'FAVORITES'
+        );
+
+        // Collect affirmations from different sources
+        const allAffirmations: Affirmation[] = [];
+
+        // Get MY_PHRASES if selected
+        if (customMixCategories!.includes('MY_PHRASES')) {
+          const { getCustomPhrases, getCustomPhrasesEnabled } = require('./services/customPhrases');
+          const customPhrases = await getCustomPhrases();
+          const isEnabled = await getCustomPhrasesEnabled();
+
+          if (isEnabled && customPhrases.length > 0) {
+            // Convert custom phrases to Affirmation format
+            const phraseAffirmations: Affirmation[] = customPhrases.map(phrase => ({
+              id: phrase.id,
+              text: phrase.text,
+              category: 'MY_PHRASES'
+            }));
+            allAffirmations.push(...phraseAffirmations);
+          }
+        }
+
+        // Get FAVORITES if selected
+        if (customMixCategories!.includes('FAVORITES')) {
+          const { getFavorites } = require('./services/favorites');
+          const favorites = await getFavorites();
+          allAffirmations.push(...favorites);
+        }
+
+        // Get AI-generated affirmations for regular categories
+        if (regularCategories.length > 0) {
+          const aiAffirmations = await generateAffirmationsBatch(
+            userData,
+            3,
+            undefined,
+            regularCategories
+          );
+          allAffirmations.push(...aiAffirmations);
+        }
+
+        // Shuffle and take a mix
+        newAffirmations = allAffirmations
+          .sort(() => Math.random() - 0.5)  // Shuffle
+          .slice(0, 3);  // Take 3 random ones
+
+      } else {
+        // Normal flow - single category or regular custom mix
+        newAffirmations = customMixCategories && customMixCategories.length > 0
+          ? await generateAffirmationsBatch(userData, 3, undefined, customMixCategories)
+          : await generateAffirmationsBatch(userData, 3, activeCategory);
+      }
 
       // Update widget with the first affirmation if available
       if (newAffirmations.length > 0) {
@@ -780,10 +874,16 @@ const HomeScreen: React.FC<{
       setAffirmations(prev => {
         // Prevent exact text duplicates
         const uniqueNew = newAffirmations.filter(n => !prev.some(p => p.text === n.text));
+
+        if (uniqueNew.length === 0 && prev.length === 0) {
+          Alert.alert("Error", "No se pudieron cargar las afirmaciones. Verifica tu conexión a internet.");
+        }
+
         return [...prev, ...uniqueNew];
       });
     } catch (error) {
       console.warn("Failed to load affirmations:", error);
+      Alert.alert("Error", "Hubo un problema al cargar las afirmaciones.");
     } finally {
       setLoading(false);
     }
@@ -796,7 +896,7 @@ const HomeScreen: React.FC<{
     return (
       <View style={styles.affirmationPage}>
         <View style={styles.homeMain}>
-          <Text style={styles.homeAffirmation}>
+          <Text style={[styles.homeAffirmation, theme === 'light' && styles.textLight]}>
             {item.text}
           </Text>
         </View>
@@ -807,7 +907,7 @@ const HomeScreen: React.FC<{
             style={styles.cardActionButton}
             onPress={() => handleShare(item)}
           >
-            <MaterialIcons name="ios-share" size={28} color="rgba(255,255,255,0.8)" />
+            <MaterialIcons name="ios-share" size={28} color={theme === 'light' ? 'rgba(0,0,0,0.6)' : "rgba(255,255,255,0.8)"} />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.cardActionButton}
@@ -816,7 +916,7 @@ const HomeScreen: React.FC<{
             <MaterialIcons
               name={isLiked ? "favorite" : "favorite-border"}
               size={32}
-              color={isLiked ? "#af25f4" : "rgba(255,255,255,0.8)"}
+              color={isLiked ? "#af25f4" : (theme === 'light' ? 'rgba(0,0,0,0.6)' : "rgba(255,255,255,0.8)")}
             />
             {/* Burst Effect centered on button */}
             {isLiked && showLikeBurst && (
@@ -832,7 +932,7 @@ const HomeScreen: React.FC<{
 
   return (
     <View style={styles.homeContainer}>
-      <CinematicBackground />
+      <CinematicBackground theme={theme} />
 
       {/* Share Modal */}
       <ShareModal
@@ -889,7 +989,7 @@ const HomeScreen: React.FC<{
             style={styles.homeHeaderButton}
             onPress={() => RevenueCatUI.presentPaywall({})}
           >
-            <MaterialCommunityIcons name="crown" size={24} color="#ffd700" />
+            <MaterialCommunityIcons name="crown" size={24} color="#AF25F4" />
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -903,7 +1003,7 @@ const HomeScreen: React.FC<{
           {/* Bottom Nav Bar - Minimalist */}
           <View style={styles.homeNav}>
             <TouchableOpacity style={styles.homeNavButton} onPress={() => onNavigate(ScreenName.CATEGORIES)}>
-              <MaterialIcons name="grid-view" size={28} color="rgba(255, 255, 255, 0.4)" />
+              <MaterialIcons name="grid-view" size={28} color={theme === 'light' ? 'rgba(0, 0, 0, 0.4)' : "rgba(255, 255, 255, 0.4)"} />
             </TouchableOpacity>
 
             <View style={styles.homeNavCenter}>
@@ -911,7 +1011,7 @@ const HomeScreen: React.FC<{
             </View>
 
             <TouchableOpacity style={styles.homeNavButton} onPress={() => onNavigate(ScreenName.PROFILE)}>
-              <MaterialIcons name="person-outline" size={28} color="rgba(255, 255, 255, 0.4)" />
+              <MaterialIcons name="person-outline" size={28} color={theme === 'light' ? 'rgba(0, 0, 0, 0.4)' : "rgba(255, 255, 255, 0.4)"} />
             </TouchableOpacity>
           </View>
         </View>
@@ -944,6 +1044,7 @@ const App: React.FC = () => {
   const [prevScreen, setPrevScreen] = useState<ScreenName>(ScreenName.HOME);
   const [activeCategory, setActiveCategory] = useState<string>('GENERAL');
   const [customMixCategories, setCustomMixCategories] = useState<string[] | null>(null);
+  const [theme, setTheme] = useState<ThemeType>('dark');
 
   const setScreen = async (newScreen: ScreenName) => {
     if (newScreen === ScreenName.SUBSCRIPTION) {
@@ -1075,15 +1176,20 @@ const App: React.FC = () => {
         return <MentalHealthScreen
           selected={formData.mentalHealthHabits}
           toggle={(id) => toggleSelection('mentalHealthHabits', id)}
-          onNext={() => setScreen(ScreenName.NOTIFICATIONS)}
+          onNext={() => setScreen(ScreenName.BENEFITS)}
           onBack={() => setScreen(ScreenName.STREAK)}
+        />;
+      case ScreenName.BENEFITS:
+        return <BenefitsScreen
+          onNext={() => setScreen(ScreenName.NOTIFICATIONS)}
+          onBack={() => setScreen(ScreenName.MENTAL_HEALTH)}
         />;
       case ScreenName.NOTIFICATIONS:
         return <NotificationScreen
           data={formData}
           update={updateData}
           onNext={() => setScreen(ScreenName.GENDER)}
-          onBack={() => setScreen(ScreenName.MENTAL_HEALTH)}
+          onBack={() => setScreen(ScreenName.BENEFITS)}
         />;
       case ScreenName.GENDER:
         return <GenderScreen
@@ -1104,8 +1210,15 @@ const App: React.FC = () => {
           userData={formData}
           activeCategory={activeCategory}
           customMixCategories={customMixCategories}
+          theme={theme}
           key={customMixCategories ? `mix-${customMixCategories.join('-')}` : activeCategory} // Force re-mount on category/mix change
         />;
+      case ScreenName.MY_PHRASES:
+        return <MyPhrasesScreen
+          onBack={() => setScreen(ScreenName.CATEGORIES)}
+          currentTheme={theme}
+        />;
+
       case ScreenName.CATEGORIES:
         return <CategoriesScreen
           onBack={() => setScreen(activeCategory === 'FAVORITES' ? ScreenName.FAVORITES : ScreenName.HOME)}
@@ -1121,6 +1234,7 @@ const App: React.FC = () => {
               setScreen(ScreenName.HOME);
             }
           }}
+          currentTheme={theme}
         />;
       case ScreenName.FAVORITES:
         return <FavoritesScreen
@@ -1130,6 +1244,7 @@ const App: React.FC = () => {
             setScreen(ScreenName.HOME);
           }}
           onNavigate={(s) => setScreen(s as ScreenName)}
+          currentTheme={theme}
         />;
       case ScreenName.CUSTOM_MIX:
         return <CustomMixScreen
@@ -1149,6 +1264,8 @@ const App: React.FC = () => {
           userData={formData}
           onNavigate={(s) => setScreen(s as ScreenName)}
           onDataUpdate={updateData}
+          currentTheme={theme}
+          onThemeChange={setTheme}
         />;
       case ScreenName.SUBSCRIPTION:
         return <SubscriptionScreen
@@ -1372,9 +1489,30 @@ const styles = StyleSheet.create({
     width: '100%',
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
-    marginTop: 10,
-    justifyContent: 'center', // Center chips
+    gap: 8,
+    justifyContent: 'center',
+    marginTop: 20,
+  },
+  privacyNoticeContainer: {
+    marginTop: 32,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  privacyNoticeTitle: {
+    color: '#A78BFA',
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  privacyNoticeText: {
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: 'center',
   },
   interestCard: {
     flexDirection: 'row',
@@ -1876,6 +2014,14 @@ const styles = StyleSheet.create({
     height: 48,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 14,
+  },
+  // Light Mode Styles
+  cardLight: {
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    borderColor: 'rgba(255, 255, 255, 0.8)',
+  },
+  textLight: {
+    color: '#1e1b4b',
   },
 });
 

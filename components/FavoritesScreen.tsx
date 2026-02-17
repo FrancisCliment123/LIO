@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import * as Haptics from 'expo-haptics';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -10,13 +11,16 @@ import { CosmicLoader } from './CosmicLoader';
 import { PulsingHeart } from './PulsingHeart';
 import RevenueCatUI from 'react-native-purchases-ui';
 
+import { ThemeType } from '../styles/theme';
+
 interface FavoritesScreenProps {
     onBack: () => void;
     onNavigate?: (screen: string) => void;
     onRefresh?: () => void;
+    currentTheme: ThemeType;
 }
 
-export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ onBack, onNavigate }) => {
+export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ onBack, onNavigate, currentTheme }) => {
     const [favorites, setFavorites] = useState<Affirmation[]>([]);
     const [displayFavorites, setDisplayFavorites] = useState<Affirmation[]>([]);
     const [loading, setLoading] = useState(true);
@@ -34,6 +38,7 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ onBack, onNavi
     };
 
     const handleUnlike = async (id: string) => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         await removeFavorite(id);
         setFavorites(prev => prev.filter(fav => fav.id !== id));
         // Remove all instances of this affirmation from the infinite list
@@ -51,18 +56,21 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ onBack, onNavi
         return (
             <View style={styles.affirmationPage}>
                 <View style={styles.homeMain}>
-                    <Text style={styles.homeAffirmation}>
+                    <Text style={[styles.homeAffirmation, currentTheme === 'light' && styles.textLight]}>
                         {item.text}
                     </Text>
                 </View>
 
                 {/* Action Buttons INSIDE the scrollable page */}
                 <View style={styles.cardActions}>
-                    <TouchableOpacity style={styles.cardActionButton}>
-                        <MaterialIcons name="share" size={28} color="rgba(255,255,255,0.8)" />
+                    <TouchableOpacity
+                        style={[styles.cardActionButton, currentTheme === 'light' && styles.actionButtonLight]}
+                        onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)}
+                    >
+                        <MaterialIcons name="share" size={28} color={currentTheme === 'light' ? 'rgba(0,0,0,0.6)' : "rgba(255,255,255,0.8)"} />
                     </TouchableOpacity>
                     <TouchableOpacity
-                        style={styles.cardActionButton}
+                        style={[styles.cardActionButton, currentTheme === 'light' && styles.actionButtonLight]}
                         onPress={() => handleUnlike(item.id)}
                     >
                         <MaterialIcons
@@ -77,8 +85,8 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ onBack, onNavi
     };
 
     return (
-        <View style={styles.container}>
-            <CinematicBackground />
+        <View style={[styles.container, currentTheme === 'light' && styles.containerLight]}>
+            <CinematicBackground theme={currentTheme} />
             {/* Content wrapper - sits above background */}
             <View style={styles.contentWrapper}>
                 {/* Main Swipeable Content */}
@@ -89,11 +97,11 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ onBack, onNavi
                 ) : favorites.length === 0 ? (
                     <SafeAreaView style={styles.emptyContainer}>
                         <TouchableOpacity onPress={onBack} style={styles.backButtonAbsolute}>
-                            <MaterialIcons name="arrow-back" size={24} color="#E2E8F0" />
+                            <MaterialIcons name="arrow-back" size={24} color={currentTheme === 'light' ? "#111827" : "#E2E8F0"} />
                         </TouchableOpacity>
                         <PulsingHeart />
-                        <Text style={styles.emptyTitle}>Sin favoritos aún</Text>
-                        <Text style={styles.emptySubtitle}>
+                        <Text style={[styles.emptyTitle, currentTheme === 'light' && styles.textLight]}>Sin favoritos aún</Text>
+                        <Text style={[styles.emptySubtitle, currentTheme === 'light' && styles.subtitleLight]}>
                             Toca el corazón en las afirmaciones que te gusten para guardarlas aquí
                         </Text>
                     </SafeAreaView>
@@ -125,7 +133,7 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ onBack, onNavi
                                     style={styles.headerButton}
                                     onPress={() => RevenueCatUI.presentPaywall({})}
                                 >
-                                    <MaterialCommunityIcons name="crown" size={24} color="#ffd700" />
+                                    <MaterialCommunityIcons name="crown" size={24} color="#AF25F4" />
                                 </TouchableOpacity>
                             </View>
                         </SafeAreaView>
@@ -138,13 +146,13 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ onBack, onNavi
                                 {/* Bottom Nav Bar - Icons in corners */}
                                 <View style={styles.nav}>
                                     <TouchableOpacity style={styles.navButton} onPress={() => onNavigate && onNavigate('CATEGORIES')}>
-                                        <MaterialIcons name="grid-view" size={28} color="rgba(255, 255, 255, 0.4)" />
+                                        <MaterialIcons name="grid-view" size={28} color={currentTheme === 'light' ? 'rgba(0, 0, 0, 0.4)' : "rgba(255, 255, 255, 0.4)"} />
                                     </TouchableOpacity>
 
                                     <View style={styles.navCenter} />
 
                                     <TouchableOpacity style={styles.navButton} onPress={() => onNavigate && onNavigate('PROFILE')}>
-                                        <MaterialIcons name="person-outline" size={28} color="rgba(255, 255, 255, 0.4)" />
+                                        <MaterialIcons name="person-outline" size={28} color={currentTheme === 'light' ? 'rgba(0, 0, 0, 0.4)' : "rgba(255, 255, 255, 0.4)"} />
                                     </TouchableOpacity>
                                 </View>
                             </View>
@@ -160,6 +168,9 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#070A1A',
+    },
+    containerLight: {
+        backgroundColor: '#F8F9FA',
     },
     contentWrapper: {
         position: 'absolute',
@@ -185,15 +196,23 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
     },
     homeAffirmation: {
+        fontFamily: 'PlaywriteNZBasic_400Regular',
         fontSize: 28,
-        fontWeight: '700',
         color: '#FFFFFF',
         textAlign: 'center',
-        lineHeight: 38,
+        lineHeight: 42,
         letterSpacing: -0.5,
         textShadowColor: 'rgba(0, 0, 0, 0.5)',
         textShadowOffset: { width: 0, height: 2 },
         textShadowRadius: 10,
+    },
+    textLight: {
+        color: '#111827',
+        textShadowColor: 'rgba(0, 0, 0, 0.05)',
+        textShadowRadius: 4,
+    },
+    subtitleLight: {
+        color: '#6B7280',
     },
     cardActions: {
         flexDirection: 'row',
@@ -210,6 +229,10 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(255, 255, 255, 0.2)',
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    actionButtonLight: {
+        backgroundColor: 'rgba(0, 0, 0, 0.05)',
+        borderColor: 'rgba(0, 0, 0, 0.1)',
     },
     topOverlay: {
         position: 'absolute',
