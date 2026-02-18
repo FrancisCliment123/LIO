@@ -110,27 +110,19 @@ const getRandomAffirmation = (): string => {
     return allAffirmations[randomIndex];
 };
 
-// Helper to update the widget
-export const updateWidget = (affirmation: string) => {
-    // TEMPORARY DISABLE: To fix crash on Home load
-    return;
+// Function to trigger a local test notification immediately (good for simulators/testing UI)
+export const scheduleTestNotification = async () => {
+    const affirmation = getRandomAffirmation();
 
-    if (Platform.OS === 'ios') {
-        try {
-            const { ExtensionStorage } = require('@bacons/apple-targets');
-            const widgetStorage = new ExtensionStorage('group.com.cisfransorganization.lio');
-            widgetStorage.set('current_affirmation', affirmation);
-
-            // Safety check: reloadWidget is only available in development builds
-            if (typeof widgetStorage.reloadWidget === 'function') {
-                widgetStorage.reloadWidget('LioWidget');
-            } else {
-                console.log('Widget reload skipped: Not supported in Expo Go.');
-            }
-        } catch (e) {
-            console.log('Error updating widget:', e);
-        }
-    }
+    await Notifications.scheduleNotificationAsync({
+        content: {
+            title: "Lio",
+            body: affirmation,
+            data: { data: 'goes here', test: true },
+            sound: true, // This plays the default sound
+        },
+        trigger: null, // null means trigger immediately
+    });
 };
 
 // Function to schedule daily notifications based on user settings
@@ -245,20 +237,4 @@ export const scheduleDailyNotifications = async (
 // Deprecated: use scheduleAllNotifications instead
 export const scheduleStreakReminder = async (enabled: boolean) => {
     console.warn('scheduleStreakReminder is deprecated.');
-};
-
-// Function to trigger a local test notification immediately (good for simulators/testing UI)
-export const scheduleTestNotification = async () => {
-    const affirmation = getRandomAffirmation();
-    updateWidget(affirmation);
-
-    await Notifications.scheduleNotificationAsync({
-        content: {
-            title: "Lio",
-            body: affirmation,
-            data: { data: 'goes here', test: true },
-            sound: true, // This plays the default sound
-        },
-        trigger: null, // null means trigger immediately
-    });
 };

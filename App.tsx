@@ -16,7 +16,6 @@ import LottieView from 'lottie-react-native';
 import {
   registerForPushNotificationsAsync,
   scheduleTestNotification,
-  updateWidget,
   scheduleDailyNotifications,
   scheduleStreakReminder
 } from './services/notifications';
@@ -136,7 +135,7 @@ const NameScreen: React.FC<{
       onBack={onBack}
       isValid={name.length > 0}
       currentStep={1}
-      totalSteps={9}
+      totalSteps={8}
     >
       <View style={styles.screenContent}>
         <View style={{ alignItems: 'center', marginBottom: 20 }}>
@@ -633,72 +632,7 @@ const GenderScreen: React.FC<{
   );
 }
 
-// Widget Screen
-const WidgetScreen: React.FC<{ onNext: () => void; onBack: () => void }> = ({ onNext, onBack }) => {
-  return (
-    <OnboardingLayout onContinue={onNext} onSkip={onNext} onBack={onBack} currentStep={9} totalSteps={9} continueText="Instalar widget">
-      <View style={styles.screenContent}>
-        {/* Icon with Glow Effect */}
-        <View style={styles.widgetIconContainer}>
-          <Image
-            source={require('./assets/frames/lio-logoalone.png')}
-            style={{ width: 100, height: 100, resizeMode: 'contain' }}
-          />
-        </View>
 
-        <Text style={[styles.screenTitle, { marginTop: 40, fontSize: 24, paddingHorizontal: 20 }]}>Añade un widget a tu pantalla de inicio</Text>
-        <Text style={styles.screenSubtitle}>
-          Mantén tus afirmaciones a la vista durante todo el día con nuestros hermosos widgets
-        </Text>
-
-        {/* Phone Mockup */}
-        <View style={styles.widgetMockup}>
-          <View style={styles.widgetPhone}>
-            {/* Phone top notch */}
-            <View style={styles.widgetPhoneNotch} />
-
-            {/* Widget preview card */}
-            <View style={styles.widgetPreview}>
-              <View style={styles.widgetCard}>
-                <View style={styles.widgetCardIconContainer}>
-                  <LinearGradient
-                    colors={['#4C1D95', '#7C3AED']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.widgetCardIcon}
-                  >
-                    <Image
-                      source={require('./assets/frames/lio-logoalone.png')}
-                      style={{ width: 24, height: 24, resizeMode: 'contain' }}
-                    />
-                  </LinearGradient>
-                </View>
-                <View style={styles.widgetCardText}>
-                  <Text style={styles.widgetCardLabel}>LIO</Text>
-                  <Text style={styles.widgetCardAffirmation}>Tu luz importa</Text>
-                </View>
-              </View>
-            </View>
-
-            {/* App grid placeholder - 4x3 */}
-            <View style={styles.widgetAppGrid}>
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
-                <View key={i} style={styles.widgetAppIcon} />
-              ))}
-            </View>
-
-            {/* Bottom Dock */}
-            <View style={styles.widgetDock}>
-              {[1, 2, 3, 4].map((i) => (
-                <View key={i} style={styles.widgetDockIcon} />
-              ))}
-            </View>
-          </View>
-        </View>
-      </View >
-    </OnboardingLayout >
-  );
-};
 
 
 // Home Screen
@@ -866,10 +800,7 @@ const HomeScreen: React.FC<{
           : await generateAffirmationsBatch(userData, 3, activeCategory);
       }
 
-      // Update widget with the first affirmation if available
-      if (newAffirmations.length > 0) {
-        updateWidget(newAffirmations[0].text);
-      }
+
 
       setAffirmations(prev => {
         // Prevent exact text duplicates
@@ -1195,14 +1126,10 @@ const App: React.FC = () => {
         return <GenderScreen
           selected={formData.gender}
           onSelect={(v) => updateData({ gender: v })}
-          onNext={() => setScreen(ScreenName.WIDGET)}
+          onNext={() => setScreen(ScreenName.HOME)}
           onBack={() => setScreen(ScreenName.NOTIFICATIONS)}
         />;
-      case ScreenName.WIDGET:
-        return <WidgetScreen
-          onNext={() => setScreen(ScreenName.HOME)}
-          onBack={() => setScreen(ScreenName.GENDER)}
-        />;
+
       case ScreenName.HOME:
         return <HomeScreen
           onReset={() => setScreen(ScreenName.WELCOME)}

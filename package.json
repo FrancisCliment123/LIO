@@ -12,7 +12,6 @@
     "android": "expo run:android"
   },
   "dependencies": {
-    "@bacons/apple-targets": "^4.0.0",
     "@expo-google-fonts/playwrite-nz-basic": "^0.4.0",
     "@expo/vector-icons": "^15.0.3",
     "@google/generative-ai": "^0.24.1",

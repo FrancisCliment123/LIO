@@ -29,7 +29,7 @@ export const BenefitsScreen: React.FC<BenefitsScreenProps> = ({ onNext, onBack }
     ];
 
     return (
-        <OnboardingLayout onContinue={onNext} onSkip={onNext} onBack={onBack} currentStep={6} totalSteps={9}>
+        <OnboardingLayout onContinue={onNext} onSkip={onNext} onBack={onBack} currentStep={6} totalSteps={8}>
             <View style={styles.screenContent}>
                 <View style={{ alignItems: 'center', marginBottom: 20 }}>
                     <Image
