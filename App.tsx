@@ -30,6 +30,7 @@ import { MyPhrasesScreen } from './components/MyPhrasesScreen';
 import * as Sharing from 'expo-sharing';
 import Purchases, { LOG_LEVEL } from 'react-native-purchases';
 import { ThemeType, getTheme } from './styles/theme';
+import { updateWidgetData } from './services/widgetData';
 import {
   useFonts,
   PlaywriteNZBasic_100Thin,
@@ -808,6 +809,11 @@ const HomeScreen: React.FC<{
 
         if (uniqueNew.length === 0 && prev.length === 0) {
           Alert.alert("Error", "No se pudieron cargar las afirmaciones. Verifica tu conexión a internet.");
+        }
+
+        // Update widget with the first new affirmation
+        if (uniqueNew.length > 0) {
+          updateWidgetData(uniqueNew[0].text, userData.name);
         }
 
         return [...prev, ...uniqueNew];

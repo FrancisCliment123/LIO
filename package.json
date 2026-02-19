@@ -9,9 +9,11 @@
     "preview": "vite preview",
     "start": "expo start",
     "ios": "expo run:ios",
-    "android": "expo run:android"
+    "android": "expo run:android",
+    "eas-build-post-install": "chmod -R 755 targets/ || true"
   },
   "dependencies": {
+    "@bacons/apple-targets": "^4.0.3",
     "@expo-google-fonts/playwrite-nz-basic": "^0.4.0",
     "@expo/vector-icons": "^15.0.3",
     "@google/generative-ai": "^0.24.1",

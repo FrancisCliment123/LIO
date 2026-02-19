@@ -20,6 +20,8 @@ interface ProfileScreenProps {
     userData?: OnboardingData;
     onNavigate?: (screen: string) => void;
     onDataUpdate?: (data: Partial<OnboardingData>) => void;
+    currentTheme: 'dark' | 'light';
+    onThemeChange: (theme: 'dark' | 'light') => void;
 }
 
 const SettingRow: React.FC<{
@@ -43,14 +45,14 @@ const SettingRow: React.FC<{
 
 
 
-export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, userData, onNavigate, onDataUpdate }) => {
+export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, userData, onNavigate, onDataUpdate, currentTheme, onThemeChange }) => {
     const [streakCount, setStreakCount] = useState(0);
     const [weeklyData, setWeeklyData] = useState<Array<{ date: string; day: string; completed: boolean; isToday: boolean; isFuture: boolean }>>([]);
 
     // Editable state
     const [name, setName] = useState(userData?.name || '');
     const [gender, setGender] = useState(userData?.gender || '');
-    const [theme, setTheme] = useState('Oscuro');
+    // Theme handled by props
     const [notificationsEnabled, setNotificationsEnabled] = useState(userData?.notificationsEnabled ?? true);
     const [notificationCount, setNotificationCount] = useState(userData?.notificationCount || 10);
     const [startTime, setStartTime] = useState(userData?.startTime || '9:00');
@@ -391,7 +393,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, userData, 
                             <SettingRow
                                 icon="dark-mode"
                                 label="Tema"
-                                value={theme}
+                                value={currentTheme === 'dark' ? 'Oscuro' : 'Día'}
                                 onPress={() => setThemeModalVisible(true)}
                             />
                         </View>
@@ -606,30 +608,33 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, userData, 
                                     <MaterialIcons name="close" size={24} color="rgba(255,255,255,0.5)" />
                                 </TouchableOpacity>
                             </View>
-                            {themeOptions.map((option) => {
+                            {themeOptions.filter(o => o !== 'Sistema').map((option) => {
                                 let iconName: keyof typeof MaterialIcons.glyphMap = 'brightness-6'; // Default for system?
                                 if (option.includes('Oscuro')) iconName = 'dark-mode';
                                 else if (option.includes('Día') || option.includes('Claro')) iconName = 'light-mode';
                                 else if (option.includes('Sistema')) iconName = 'settings-system-daydream';
+
+                                const isSelected = (currentTheme === 'dark' && option === 'Oscuro') || (currentTheme === 'light' && option.includes('Día'));
 
                                 return (
                                     <TouchableOpacity
                                         key={option}
                                         style={[
                                             styles.optionRow,
-                                            theme === option && styles.optionRowSelected
+                                            isSelected && styles.optionRowSelected
                                         ]}
                                         onPress={() => {
-                                            setTheme(option);
+                                            if (option === 'Oscuro') onThemeChange('dark');
+                                            if (option.includes('Día')) onThemeChange('light');
                                             setThemeModalVisible(false);
                                         }}
                                     >
                                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                                            <MaterialIcons name={iconName} size={24} color={theme === option ? "#A78BFA" : "rgba(255,255,255,0.5)"} />
-                                            <Text style={[styles.optionText, theme === option && { color: '#A78BFA', fontWeight: 'bold' }]}>{option}</Text>
+                                            <MaterialIcons name={iconName} size={24} color={isSelected ? "#A78BFA" : "rgba(255,255,255,0.5)"} />
+                                            <Text style={[styles.optionText, isSelected && { color: '#A78BFA', fontWeight: 'bold' }]}>{option}</Text>
                                         </View>
-                                        <View style={[styles.radioCircle, theme === option && styles.radioCircleSelected]}>
-                                            {theme === option && <View style={styles.radioDot} />}
+                                        <View style={[styles.radioCircle, isSelected && styles.radioCircleSelected]}>
+                                            {isSelected && <View style={styles.radioDot} />}
                                         </View>
                                     </TouchableOpacity>
                                 );

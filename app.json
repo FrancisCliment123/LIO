@@ -21,6 +21,11 @@
       "icon": "./assets/icon-real.png",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
+      },
+      "entitlements": {
+        "com.apple.security.application-groups": [
+          "group.com.cisfran.lio"
+        ]
       }
     },
     "android": {
@@ -38,7 +43,8 @@
           "color": "#ffffff"
         }
       ],
-      "expo-font"
+      "expo-font",
+      "@bacons/apple-targets"
     ],
     "extra": {
       "eas": {
